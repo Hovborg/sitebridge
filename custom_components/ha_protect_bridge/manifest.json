@@ -1,0 +1,11 @@
+{
+  "domain": "ha_protect_bridge",
+  "name": "HA Protect Bridge",
+  "codeowners": ["@Hovborg"],
+  "config_flow": true,
+  "documentation": "https://github.com/Hovborg/sitebridge",
+  "issue_tracker": "https://github.com/Hovborg/sitebridge/issues",
+  "iot_class": "local_push",
+  "loggers": ["custom_components.ha_protect_bridge"],
+  "version": "0.1.0"
+}

@@ -1,66 +1,46 @@
 # Architecture
 
-## Positioning
+## New direction
 
-Sitebridge is meant to be a thin, explicit bridge between existing systems, not a replacement for Home Assistant, UniFi consoles, or vendor UIs.
+The repository is now split conceptually into two future deliverables:
 
-## Layers
+- a Home Assistant custom integration for Protect webhook bridging
+- a later shared Python library / CLI split
 
-### 1. CLI surface
+For now, this repo prioritizes the Home Assistant side because HACS has stricter packaging expectations than a generic CLI project.
 
-Human-facing commands:
+## Runtime layers in this repo
 
-- `ha`
-- `site`
-- `network`
-- `protect`
-- `bridge`
-- `doctor`
+### 1. Home Assistant custom integration
 
-### 2. Connectors
+`custom_components/ha_protect_bridge/`
 
-Transport-specific clients:
+Responsibilities:
 
-- Home Assistant via `hass-cli` first, direct REST fallback
-- UniFi Site Manager via official cloud API
-- UniFi Network via official local API
-- UniFi Protect via documented/public mechanisms only
+- create and manage the webhook endpoint
+- receive Protect Alarm Manager webhooks
+- normalize payloads
+- fire HA events that automations can consume
 
-### 3. Domain mapping
+### 2. Dev helper code
 
-Normalize objects such as:
+`src/sitebridge/`
 
-- sites
-- network devices
-- clients
-- cameras
-- detections
-- doors
-- Home Assistant entities
+This is no longer the primary product surface. It can remain as helper code while the HACS integration takes shape, but shared CLI/core logic should eventually move out to its own package or repository.
 
-### 4. Bridge logic
+## Event-first approach
 
-Cross-system features:
+The first implementation target is events, not entities.
 
-- presence enrichment
-- camera event forwarding
-- webhook ingestion
-- Home Assistant automation helpers
-- future policy sync and tagging
+Why:
 
-## Safety Rules
+- person/animal/vehicle/package automations become useful immediately
+- event payloads are easier to normalize than dynamic entities
+- it matches Protect Alarm Manager and webhook-driven flows naturally
 
-- Never assume cloud access if local access exists.
-- Do not store secrets in code or committed fixtures.
-- Prefer read operations before write operations.
-- Keep write paths explicit and opt-in.
+## Planned next layers
 
-## First Implementation Order
-
-1. `doctor`
-2. read-only `site`
-3. read-only `network`
-4. read-only `protect`
-5. read-only `ha`
-6. bridge webhook/event features
-7. controlled write operations
+1. typed HA events from webhook payloads
+2. options/config for filters and noise reduction
+3. optional entities for "last event", counters, and convenience sensors
+4. separate shared client library / CLI

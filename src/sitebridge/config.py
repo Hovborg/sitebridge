@@ -26,7 +26,7 @@ class Settings:
     unifi_protect_api_key: str | None
 
     @classmethod
-    def load(cls) -> "Settings":
+    def load(cls) -> Settings:
         load_dotenv()
         return cls(
             ha_base_url=_clean(getenv("HA_BASE_URL")),

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "sitebridge"
 version = "0.1.0"
-description = "Private-first scaffold for an unofficial Home Assistant and UniFi bridge CLI."
+description = "Development scaffold for a Home Assistant UniFi Protect bridge and future shared tooling split."
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
@@ -27,7 +27,7 @@ sitebridge = "sitebridge.cli:main"
 packages = ["src/sitebridge"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = [".", "src"]
 testpaths = ["tests"]
 
 [tool.ruff]

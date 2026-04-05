@@ -7,11 +7,12 @@ Læs `/mnt/c/codex_projekts/.ai/infrastructure.md` for delt system-kontekst.
 
 - `AI_CONTEXT.md`
 - `README.md`
-- `docs/architecture.md`
-- `docs/legal-and-publishing.md`
+- `custom_components/ha_protect_bridge/manifest.json`
+- `custom_components/ha_protect_bridge/normalize.py`
+- `docs/repo-split.md`
 
 ## Noter
 
-- Brug `hass-cli` til live Home Assistant-adgang på denne host.
-- Hold UniFi-delen på officielle API'er som standard.
-- Protect-funktioner skal dokumenteres ekstra tydeligt, hvis de ikke er lige så klart dokumenterede som Network/Site Manager.
+- Hovedleverancen i denne repo er nu HA custom integrationen.
+- HACS-reglerne betyder, at integrationens runtime-kode skal fungere fra `custom_components/ha_protect_bridge/`.
+- Shared library/CLI er et senere split, ikke første leverance her.

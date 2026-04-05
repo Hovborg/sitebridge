@@ -1,71 +1,70 @@
 # Sitebridge
 
-Private-first scaffold for an unofficial CLI and bridge that combines Home Assistant with official UniFi APIs and selected UniFi Protect capabilities.
+Private-first scaffold that is now pivoting toward a Home Assistant custom integration for UniFi Protect webhook bridging.
 
-`Sitebridge` is a working title chosen to avoid shipping a public repo or package name that looks official or reuses Ubiquiti trademarks as the product name.
+`Sitebridge` is still a working title. The important shift is architectural: if this should be installable via HACS, the Home Assistant bridge must live as a real custom integration under `custom_components/`.
 
-## Status
+## Current direction
 
-Early scaffold. This repo is intended to start closed, stabilize against your environment, and only then move toward a public GitHub release.
+This repository now focuses first on `ha_protect_bridge`:
 
-## Goals
+- a HACS-style Home Assistant custom integration
+- webhook ingestion from UniFi Protect Alarm Manager
+- automatic Home Assistant events for motion, person, animal, vehicle, package, and related detections
 
-- Provide a single CLI for Home Assistant, UniFi Site Manager, UniFi Network, and UniFi Protect.
-- Support cameras and Protect events from the start, not only network devices.
-- Add a clean HA bridge layer for automations, event forwarding, and state enrichment.
-- Stay on documented, supported APIs whenever possible.
-- Keep branding clearly unofficial.
+Shared CLI/core clients are still useful, but they should be split out later into a separate package/repository if we want both a clean HACS experience and reusable Python tooling.
 
-## Planned Command Areas
+## Why split the architecture
 
-- `sitebridge ha ...`
-- `sitebridge site ...`
-- `sitebridge network ...`
-- `sitebridge protect ...`
-- `sitebridge bridge ...`
-- `sitebridge doctor`
+Official sources point in this direction:
 
-## Principles
+- HACS expects one integration per repository under `custom_components/`
+- UniFi APIs are already split by Ubiquiti into Site Manager, Network, Protect, and Access surfaces
+- Home Assistant itself treats UniFi Network and UniFi Protect as separate integrations
 
-- Use official APIs first.
-- Avoid undocumented private endpoints by default.
-- Keep Home Assistant integration local-first.
-- Require explicit configuration for anything security-sensitive.
-- Treat publishing, naming, and trademarks as first-class concerns.
+## What is implemented now
 
-## Quick Start
+- HACS metadata via `hacs.json`
+- a custom integration scaffold in `custom_components/ha_protect_bridge/`
+- webhook setup via Home Assistant webhook config flow
+- payload normalization for Protect Alarm Manager motion/object detections
+- Home Assistant event firing for automations
+
+## Event model
+
+Every received webhook fires:
+
+- `ha_protect_bridge_webhook`
+
+Detection-aware payloads also fire:
+
+- `ha_protect_bridge_detection`
+- `ha_protect_bridge_motion`
+- `ha_protect_bridge_person`
+- `ha_protect_bridge_animal`
+- `ha_protect_bridge_vehicle`
+- `ha_protect_bridge_package`
+- and similar typed events when recognized
+
+## Quick start for local development
 
 ```bash
 cd /path/to/sitebridge
-cp .env.example .env
-uv sync --extra dev
-uv run sitebridge doctor
-```
-
-If `uv` is not installed yet, create a virtual environment manually:
-
-```bash
 python3.14 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-sitebridge doctor
+pytest
 ```
 
-## Key Docs
+## Key docs
 
 - [AI_CONTEXT.md](AI_CONTEXT.md)
 - [docs/architecture.md](docs/architecture.md)
 - [docs/apis-and-scope.md](docs/apis-and-scope.md)
 - [docs/ha-protect-bridge.md](docs/ha-protect-bridge.md)
+- [docs/repo-split.md](docs/repo-split.md)
 - [docs/legal-and-publishing.md](docs/legal-and-publishing.md)
-- [docs/roadmap.md](docs/roadmap.md)
 
-## Publishing Posture
+## Status
 
-Do not open this repo publicly until these are true:
-
-- naming has been reviewed for trademark risk
-- Protect support is explicitly scoped
-- documentation clearly states unofficial status
-- CI is green
-- secrets handling and config examples are clean
+This repo is still private. It is now positioned as the HA/Protect bridge first. The shared client/CLI layer should follow as a separate package once the webhook/event model is proven.

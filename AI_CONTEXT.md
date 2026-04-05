@@ -6,88 +6,61 @@ Læs `/mnt/c/codex_projekts/.ai/conventions.md` for projektstruktur og AI-filkon
 
 ## Formål
 
-`Sitebridge` er et nyt standalone projekt i `/mnt/c/codex_projekts/projects/sitebridge`.
+`Sitebridge` er nu i praksis ved at blive delt op.
 
-Projektet skal ende som en uofficiel CLI og integrationsbro mellem:
+Denne repo fokuserer først på en Home Assistant custom integration under `custom_components/ha_protect_bridge`, så den kan blive HACS-installérbar og håndtere UniFi Protect webhooks automatisk.
 
-- Home Assistant
-- UniFi Site Manager API
-- UniFi Network API
-- UniFi Protect
-
-Målet er både lokal drift i homelabbet og senere mulig publicering på GitHub, når projektet er teknisk og dokumentationsmæssigt modent.
+Shared Python-klienter og CLI bør senere flyttes til en separat pakke/repo, hvis de skal være rene og genbrugelige uden Home Assistant.
 
 ## Vigtige Regler
 
-1. Brug et neutralt produktnavn. Undgå at gøre `UniFi` eller `Ubiquiti` til repo-, package- eller CLI-navn.
-2. Beskriv altid projektet som uofficielt/community-drevet, medmindre der kommer skriftlig godkendelse fra Ubiquiti.
-3. Brug officielle eller tydeligt dokumenterede API'er først.
-4. Hvis en Protect-funktion kun findes via private/ustabile endpoints, skal det markeres eksplicit i docs før implementering.
-5. Home Assistant live-adgang på denne Linux-host skal bruge `hass-cli`, aldrig `ha`.
-6. Direkte REST-kald til Home Assistant er fallback, hvis MCP og `hass-cli` ikke er nok.
-7. Hold hemmeligheder ude af repoet. Brug `.env`, lokale shell-variabler eller secret managers.
+1. HACS-retningen betyder, at al runtime-kode til custom integrationen skal kunne fungere fra `custom_components/ha_protect_bridge/`.
+2. Brug officielle eller tydeligt dokumenterede API'er først.
+3. Beskriv projektet som uofficielt/community-drevet, medmindre der kommer skriftlig godkendelse fra Ubiquiti.
+4. Home Assistant live-adgang på denne Linux-host skal bruge `hass-cli`, aldrig `ha`.
+5. Direkte REST-kald til Home Assistant er fallback, hvis MCP og `hass-cli` ikke er nok.
+6. Hold hemmeligheder ude af repoet. Brug `.env`, lokale shell-variabler eller secret managers.
+7. Hvis en Protect-funktion kun findes via private/ustabile endpoints, skal det markeres eksplicit i docs før implementering.
 8. Repoet starter lukket/private-first. Publicering kommer først efter review af navn, docs, sikkerhed og API-scope.
 
-## Scope
+## Scope lige nu
 
 ### Inden for scope
 
-- CLI til forespørgsler mod officielle UniFi API'er
-- CLI til Home Assistant-funktioner relevante for netværk, presence, kameraer og automations
-- Protect/kamera-relaterede kommandoer
-- HA-bridge for events, webhooks og state-enrichment
-- Dokumentation for lovlig/publicerbar struktur
+- Home Assistant custom integration for Protect Alarm Manager webhooks
+- Automatisk oversættelse af webhook-payloads til HA-events
+- Understøttelse af motion, person, animal, vehicle, package og beslægtede detection-typer
+- Dokumentation for HACS-retning og repo-split
 
-### Uden for scope indtil videre
+### Uden for scope lige nu
 
+- Fulde UniFi Network/Site Manager klienter i denne repo
 - Reverse engineering af private mobil-app endpoints
 - Branding der kan forveksles med officiel Ubiquiti software
-- Automatisk publicering til GitHub/PyPI uden manuel gennemgang
 
 ## Teknisk Retning
 
-- Sprog: Python 3.14
-- Pakkestruktur: `src/` layout
-- CLI: Typer
-- HTTP: `httpx`
-- Konfiguration: miljøvariabler fra `.env`
+- Primær leverance: `custom_components/ha_protect_bridge`
+- Dev-værktøjer/tests kan stadig ligge i repo-roden
 - Kvalitet: `ruff`, `pytest`, GitHub Actions
+- Event-model først, entities senere
 
-## Planlagte Moduler
+## Eventstrategi
 
-- `sitebridge.cli`
-- `sitebridge.config`
-- `sitebridge.ha`
-- `sitebridge.unifi.site_manager`
-- `sitebridge.unifi.network`
-- `sitebridge.unifi.protect`
-- `sitebridge.bridge`
+Webhooks skal omsættes til:
 
-## Kilder og Research
+- et generisk event for alle webhooks
+- et generisk detection-event
+- et typed event pr. genkendt detection-type, fx `ha_protect_bridge_person`
 
-Brug primært officielle kilder, især:
-
-- Ubiquiti Help Center
-- `developer.ui.com`
-- Home Assistant officiel dokumentation
-
-Når brugerens spørgsmål handler om "seneste", aktuelle API-muligheder eller support-status, skal der browses først.
+Det gør automations lette at skrive, også før vi bygger egentlige entities.
 
 ## Lokale Kommandoer
-
-```bash
-uv sync --extra dev
-uv run sitebridge doctor
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-```
-
-Hvis `uv` ikke er installeret:
 
 ```bash
 python3.14 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
+python3 -m compileall custom_components src
 ```

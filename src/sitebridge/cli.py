@@ -72,7 +72,9 @@ def protect_cameras() -> None:
 @bridge_app.command("plan")
 def bridge_plan() -> None:
     """Show the current bridge direction."""
-    typer.echo("Bridge layer is planned for HA automations, Protect webhooks, and state enrichment.")
+    typer.echo(
+        "Bridge layer is planned for HA automations, Protect webhooks, and state enrichment."
+    )
 
 
 def main() -> None:

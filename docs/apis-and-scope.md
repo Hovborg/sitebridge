@@ -2,64 +2,46 @@
 
 Status reviewed against official sources on **5 April 2026**.
 
+## Key finding: this should be split
+
+The official sources point toward a split architecture:
+
+- HACS expects one integration per repository under `custom_components/`
+- Ubiquiti splits official surfaces into Site Manager, local app APIs, Protect, and Access
+- Home Assistant treats UniFi Network and UniFi Protect as separate integrations
+
+## What this repo should cover first
+
+This repo should cover the Home Assistant bridge for UniFi Protect webhooks first.
+
+Specifically:
+
+- Protect Alarm Manager webhook ingestion
+- normalized HA events for motion, person, animal, vehicle, package, and related triggers
+- a HACS-friendly custom integration structure
+
+## What should move elsewhere later
+
+These should become a separate shared package/repository later:
+
+- Site Manager client
+- UniFi Network client
+- generic CLI for non-HA users
+- wider multi-product bridge logic
+
 ## Home Assistant
 
-### Supported direction
-
 - Use `hass-cli` on this Linux host for live operational checks.
-- Use Home Assistant REST and native integrations where appropriate.
-
-### Why
-
-- `hass-cli` is the correct external CLI on this host.
-- `ha` is primarily for Home Assistant OS / supervised environments, not this Linux host.
-
-## UniFi Site Manager
-
-### Current posture
-
-Supported and should be first-class.
-
-### Reason
-
-Ubiquiti has an official developer portal and a stable Site Manager API.
-
-## UniFi Network
-
-### Current posture
-
-Supported and should be first-class.
-
-### Reason
-
-Ubiquiti documents a local Network API and exposes integrations/API-key workflow in the product UI.
+- Use HA custom integration structure for runtime code.
 
 ## UniFi Protect
 
-### Current posture
+Officially relevant capabilities for this bridge:
 
-Supported, but with stricter documentation discipline.
+- Alarm Manager supports Protect triggers for person, vehicle, package, animal, motion, sound, line crossing, NFC, doorbell and more.
+- Webhook actions can send GET or POST to a custom URL.
+- POST should be preferred for richer structured payloads.
 
-### Reason
+## Naming rule
 
-Protect is strategically important because cameras and event flows are a core requirement. However, the documentation picture is less straightforward than Site Manager and Network, so every feature must be labeled by confidence:
-
-- `official`
-- `documented-but-product-local`
-- `experimental`
-
-### Rule
-
-Do not silently treat a private or weakly documented Protect endpoint as stable.
-
-## Home Assistant <-> UniFi Protect
-
-### Practical integration paths
-
-- Home Assistant official UniFi Protect integration
-- Protect webhooks into Home Assistant webhook-triggered automations
-- future bridge helpers that normalize event payloads
-
-## Naming Rule
-
-The repository and package name should remain neutral unless legal/trademark review says otherwise.
+The repository/package naming can change later, but runtime domain naming should stay neutral and unofficial.

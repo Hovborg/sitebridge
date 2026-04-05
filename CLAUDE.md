@@ -8,12 +8,13 @@ Læs `/mnt/c/codex_projekts/.ai/model-routing.md` for model-valg og token-bespar
 
 - `AI_CONTEXT.md`
 - `README.md`
-- `docs/apis-and-scope.md`
-- `docs/legal-and-publishing.md`
+- `custom_components/ha_protect_bridge/manifest.json`
+- `custom_components/ha_protect_bridge/webhook.py`
+- `docs/repo-split.md`
 
 ## Claude-Specifikke Noter
 
-- Projektet er private-first og må ikke fremstilles som officielt Ubiquiti-software.
+- Denne repo er nu først og fremmest HA Protect bridge / HACS-retning.
+- Brug officielle Home Assistant- og Ubiquiti-kilder ved arkitekturvalg.
 - Brug `hass-cli` for live Home Assistant checks på denne host.
-- Brug web-browsing til aktuelle UniFi/Protect/HA-spørgsmål.
-- Hvis du foreslår publicering, så verificer navn, trademark-risiko og API-scope først.
+- Vær skeptisk over for antagelser om Protect payloads; dokumentér hvad der er inferens.

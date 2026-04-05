@@ -7,10 +7,10 @@ Læs `/mnt/c/codex_projekts/.ai/infrastructure.md` for delt system-kontekst.
 
 - `AI_CONTEXT.md`
 - `README.md`
-- `docs/roadmap.md`
+- `custom_components/ha_protect_bridge/`
+- `docs/repo-split.md`
 
 ## Noter
 
-- Projektet er en uofficiel CLI/bridge.
-- Hold navngivning neutral.
-- Brug `hass-cli` til live Home Assistant checks på denne host.
+- Projektet er nu primært en uofficiel HA/Protect bridge.
+- HACS-struktur har prioritet over generisk CLI-struktur i denne repo.
