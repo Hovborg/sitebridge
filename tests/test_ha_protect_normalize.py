@@ -1,4 +1,7 @@
-from custom_components.ha_protect_bridge.normalize import normalize_webhook_payload
+from custom_components.ha_protect_bridge.normalize import (
+    normalize_event_payload,
+    normalize_webhook_payload,
+)
 
 
 def test_normalize_official_motion_sample_shape() -> None:
@@ -66,3 +69,37 @@ def test_normalize_audio_alarm_alias() -> None:
 
     assert normalized["primary_detection_type"] == "audio_alarm_smoke"
     assert normalized["device_ids"] == ["84784828725C"]
+
+
+def test_normalize_smart_detect_event_payload() -> None:
+    normalized = normalize_event_payload(
+        {
+            "type": "smartDetectZone",
+            "camera": "586ab7c2bb6423c3fdd47e95",
+            "smartDetectTypes": ["person", "vehicle", "face", "alrmSmoke"],
+            "timestamp": 1763816532675,
+        }
+    )
+
+    assert normalized["detection_types"] == [
+        "person",
+        "vehicle",
+        "audio_alarm_smoke",
+    ]
+    assert normalized["device_ids"] == ["586ab7c2bb6423c3fdd47e95"]
+    assert normalized["timestamp_ms"] == 1763816532675
+
+
+def test_normalize_ring_event_uses_start_when_timestamp_missing() -> None:
+    normalized = normalize_event_payload(
+        {
+            "type": "ring",
+            "camera": "1c9a2db4df6efda47a3509be",
+            "start": 1642971766763,
+            "timestamp": None,
+        }
+    )
+
+    assert normalized["detection_types"] == ["ring"]
+    assert normalized["device_ids"] == ["1c9a2db4df6efda47a3509be"]
+    assert normalized["timestamp_ms"] == 1642971766763

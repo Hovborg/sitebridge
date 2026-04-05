@@ -18,6 +18,14 @@ CONF_WEBHOOK_ID = "webhook_id"
 DEFAULT_VERIFY_SSL = False
 DEFAULT_TIMEOUT_SECONDS = 20
 SUPPORTED_METHODS = ("GET", "POST", "PUT")
+INITIAL_EVENT_BACKFILL_LIMIT = 1000
+BACKFILL_EVENT_TYPES = (
+    "motion",
+    "ring",
+    "smartDetectZone",
+    "smartDetectLine",
+    "smartAudioDetect",
+)
 
 SERVICE_SHOW_SETUP_INFO = "show_setup_info"
 SERVICE_RESYNC = "resync"

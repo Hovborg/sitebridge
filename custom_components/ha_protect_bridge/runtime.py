@@ -16,13 +16,16 @@ from .automation_payloads import (
 )
 from .catalog import build_camera_catalog, camera_by_key, humanize_source, resolve_cameras
 from .const import (
+    BACKFILL_EVENT_TYPES,
     CONF_HOST,
     CONF_VERIFY_SSL,
     CONF_WEBHOOK_BASE_URL,
     CONF_WEBHOOK_ID,
     DOMAIN,
+    INITIAL_EVENT_BACKFILL_LIMIT,
     SOURCE_ICONS,
 )
+from .normalize import normalize_event_payload
 from .protect_api import ProtectApiClient, ProtectApiError
 
 _LOGGER = logging.getLogger(__name__)
@@ -98,6 +101,7 @@ class HaProtectBridgeRuntime:
             automations = await self._api.async_get_automations()
             await self._async_sync_managed_automations(automations)
             self._rebuild_sensor_specs()
+            await self._async_backfill_recent_events()
             self.last_sync_at = datetime.now(UTC)
             self.last_sync_error = None
             self._notify_listeners()
@@ -112,23 +116,7 @@ class HaProtectBridgeRuntime:
     async def async_process_webhook(self, normalized: dict[str, Any]) -> list[dict[str, Any]]:
         timestamp = _timestamp_from_normalized(normalized)
         self.last_webhook_at = timestamp
-        matched_cameras = resolve_cameras(self.catalog, normalized.get("device_ids") or [])
-        changed = False
-
-        for source in normalized.get("detection_types") or []:
-            global_key = f"global:{source}"
-            if global_key in self._sensor_specs:
-                self._timestamps[global_key] = timestamp
-                self._event_summaries[global_key] = _event_summary(normalized)
-                changed = True
-
-            for camera in matched_cameras:
-                sensor_key = f"{camera['camera_key']}:{source}"
-                if sensor_key not in self._sensor_specs:
-                    continue
-                self._timestamps[sensor_key] = timestamp
-                self._event_summaries[sensor_key] = _event_summary(normalized)
-                changed = True
+        changed, matched_cameras = self._apply_normalized_event(normalized, timestamp)
 
         if changed:
             self._notify_listeners()
@@ -300,6 +288,59 @@ class HaProtectBridgeRuntime:
                 )
 
         self._sensor_specs = sensor_specs
+
+    async def _async_backfill_recent_events(self) -> None:
+        try:
+            events = await self._api.async_get_events(
+                limit=INITIAL_EVENT_BACKFILL_LIMIT,
+                types=list(BACKFILL_EVENT_TYPES),
+                sorting="desc",
+            )
+        except ProtectApiError as err:
+            _LOGGER.warning("Could not backfill Protect events: %s", err)
+            return
+
+        for event in events:
+            normalized = normalize_event_payload(event)
+            if not normalized.get("detection_types"):
+                continue
+            timestamp = _timestamp_from_normalized(normalized)
+            self._apply_normalized_event(normalized, timestamp)
+
+    def _apply_normalized_event(
+        self,
+        normalized: dict[str, Any],
+        timestamp: datetime,
+    ) -> tuple[bool, list[dict[str, Any]]]:
+        matched_cameras = resolve_cameras(self.catalog, normalized.get("device_ids") or [])
+        changed = False
+
+        for source in normalized.get("detection_types") or []:
+            global_key = f"global:{source}"
+            if global_key in self._sensor_specs:
+                changed |= self._update_sensor_state(global_key, timestamp, normalized)
+
+            for camera in matched_cameras:
+                sensor_key = f"{camera['camera_key']}:{source}"
+                if sensor_key not in self._sensor_specs:
+                    continue
+                changed |= self._update_sensor_state(sensor_key, timestamp, normalized)
+
+        return changed, matched_cameras
+
+    def _update_sensor_state(
+        self,
+        sensor_key: str,
+        timestamp: datetime,
+        normalized: dict[str, Any],
+    ) -> bool:
+        existing = self._timestamps.get(sensor_key)
+        if existing is not None and existing >= timestamp:
+            return False
+
+        self._timestamps[sensor_key] = timestamp
+        self._event_summaries[sensor_key] = _event_summary(normalized)
+        return True
 
     @callback
     def _notify_listeners(self) -> None:

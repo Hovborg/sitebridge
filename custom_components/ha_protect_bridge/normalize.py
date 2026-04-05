@@ -57,6 +57,26 @@ _NAME_HINTS = (
     ("bark", "audio_alarm_bark"),
 )
 
+_EVENT_TYPE_TO_DETECTIONS = {
+    "motion": ("motion",),
+    "ring": ("ring",),
+}
+
+_SMART_EVENT_TYPE_TO_DETECTIONS = {
+    "person": ("person",),
+    "vehicle": ("vehicle",),
+    "animal": ("animal",),
+    "package": ("package",),
+    "alrmbark": ("audio_alarm_bark",),
+    "alrmburglar": ("audio_alarm_burglar",),
+    "alrmcarhorn": ("audio_alarm_car_horn",),
+    "alrmcmonx": ("audio_alarm_co",),
+    "alrmglassbreak": ("audio_alarm_glass_break",),
+    "alrmsiren": ("audio_alarm_siren",),
+    "alrmsmoke": ("audio_alarm_smoke",),
+    "alrmspeak": ("audio_alarm_speak",),
+}
+
 
 def normalize_webhook_payload(
     payload: Mapping[str, Any] | None,
@@ -86,6 +106,42 @@ def normalize_webhook_payload(
         "timestamp_ms": timestamp_ms,
         "timestamp_iso": _timestamp_to_iso(timestamp_ms),
         "query": query,
+        "raw_payload": payload,
+        "event_types": [f"{DOMAIN}_{kind}" for kind in detection_types],
+    }
+
+
+def normalize_event_payload(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    payload = dict(payload or {})
+    event_type = _string_or_none(payload.get("type"))
+    smart_detect_types = _extract_smart_detect_types(payload)
+    detection_types = _extract_event_detection_types(event_type, smart_detect_types)
+
+    device_ids = _unique(
+        [
+            value
+            for value in (
+                _string_or_none(payload.get("camera")),
+                _string_or_none(payload.get("cameraId")),
+                _string_or_none(payload.get("device")),
+                _string_or_none(payload.get("deviceId")),
+            )
+            if value
+        ]
+    )
+    timestamp_ms = _coerce_int(
+        payload.get("timestamp") or payload.get("start") or payload.get("end")
+    )
+
+    return {
+        "alarm_name": event_type,
+        "detection_types": detection_types,
+        "primary_detection_type": detection_types[0] if detection_types else None,
+        "device_ids": device_ids,
+        "source_values": smart_detect_types or ([event_type] if event_type else []),
+        "timestamp_ms": timestamp_ms,
+        "timestamp_iso": _timestamp_to_iso(timestamp_ms),
+        "query": {},
         "raw_payload": payload,
         "event_types": [f"{DOMAIN}_{kind}" for kind in detection_types],
     }
@@ -125,6 +181,31 @@ def _extract_source_values(alarm: Mapping[str, Any], query: Mapping[str, str]) -
             values.append(value)
 
     return _unique(values)
+
+
+def _extract_smart_detect_types(payload: Mapping[str, Any]) -> list[str]:
+    values: list[str] = []
+    for item in payload.get("smartDetectTypes") or []:
+        text = _string_or_none(item)
+        if text:
+            values.append(text)
+    return _unique(values)
+
+
+def _extract_event_detection_types(
+    event_type: str | None,
+    smart_detect_types: list[str],
+) -> list[str]:
+    detections: list[str] = []
+
+    if event_type:
+        detections.extend(_EVENT_TYPE_TO_DETECTIONS.get(event_type, ()))
+
+    if event_type in {"smartDetectZone", "smartDetectLine", "smartAudioDetect"}:
+        for raw in smart_detect_types:
+            detections.extend(_SMART_EVENT_TYPE_TO_DETECTIONS.get(_slugify(raw), ()))
+
+    return _unique(detections)
 
 
 def _extract_detection_types(alarm_name: str | None, source_values: list[str]) -> list[str]:

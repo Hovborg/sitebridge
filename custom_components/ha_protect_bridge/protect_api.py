@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -73,6 +74,30 @@ class ProtectApiClient:
             return [item for item in response if isinstance(item, dict)]
         return []
 
+    async def async_get_events(
+        self,
+        *,
+        limit: int = 250,
+        types: list[str] | None = None,
+        sorting: str = "desc",
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {
+            "limit": limit,
+            "orderDirection": sorting.upper(),
+            "withoutDescriptions": "true",
+        }
+        if types:
+            params["types"] = types
+
+        response = await self._async_request(
+            "GET",
+            "/proxy/protect/api/events",
+            params=params,
+        )
+        if isinstance(response, list):
+            return [item for item in response if isinstance(item, dict)]
+        return []
+
     async def async_create_automation(self, payload: dict[str, Any]) -> dict[str, Any]:
         response = await self._async_request(
             "POST",
@@ -89,6 +114,7 @@ class ProtectApiClient:
         method: str,
         path: str,
         payload: dict[str, Any] | None = None,
+        params: Mapping[str, Any] | None = None,
         allow_reauth: bool = True,
     ) -> Any:
         await self._async_ensure_session()
@@ -102,6 +128,7 @@ class ProtectApiClient:
             method,
             f"{self._base_url}{path}",
             json=payload,
+            params=params,
             headers=headers,
         ) as response:
             if response.status in {401, 403}:
@@ -111,6 +138,7 @@ class ProtectApiClient:
                         method,
                         path,
                         payload=payload,
+                        params=params,
                         allow_reauth=False,
                     )
                 raise ProtectAuthError(f"Protect authentication failed with {response.status}")
