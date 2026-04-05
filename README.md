@@ -1,28 +1,45 @@
 # HA Protect Bridge
 
 <p align="center">
-  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=Hovborg&repository=sitebridge&category=integration">
-    <img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open in HACS">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/Hovborg/sitebridge/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Hovborg/sitebridge/ci.yml?branch=main&label=CI&style=for-the-badge" alt="CI"></a>
-  <a href="https://github.com/Hovborg/sitebridge/actions/workflows/hassfest.yml"><img src="https://img.shields.io/github/actions/workflow/status/Hovborg/sitebridge/hassfest.yml?branch=main&label=Hassfest&style=for-the-badge" alt="Hassfest"></a>
-  <img src="https://img.shields.io/badge/HACS-Integration-41BDF5?style=for-the-badge" alt="HACS Integration">
+  <img src="https://img.shields.io/badge/HACS-Ready_when_public-41BDF5?style=for-the-badge" alt="HACS ready when public">
   <img src="https://img.shields.io/badge/Home%20Assistant-2026.3%2B-18BCF2?style=for-the-badge" alt="Home Assistant 2026.3+">
+  <img src="https://img.shields.io/badge/UniFi%20Protect-Auto%20Provisioned-2EBD59?style=for-the-badge" alt="UniFi Protect auto provisioned">
 </p>
 
 A Home Assistant custom integration for UniFi Protect that discovers your cameras, creates the needed Protect webhook automations automatically, and exposes detection sensors in Home Assistant.
 
 Instead of building Alarm Manager webhook rules by hand, you install the integration, add your Protect host, and let the bridge provision the Protect side automatically.
 
+> [!IMPORTANT]
+> The **Open in HACS** flow does **not** work while this repository is `PRIVATE`.
+>
+> HACS cannot use private GitHub repositories, so right now the correct install method is **manual installation**.
+>
+> When the repository becomes public, HACS custom-repository install will work.
+
+## Install Right Now
+
+### Manual install while the repo is private
+
+1. Copy `custom_components/ha_protect_bridge` into your Home Assistant config directory.
+2. Make sure the final path is:
+
+```text
+config/custom_components/ha_protect_bridge/
+```
+
+3. Restart Home Assistant.
+4. Go to **Settings -> Devices & services**.
+5. Click **Add Integration**.
+6. Search for **HA Protect Bridge**.
+7. Enter your Protect host, username, and password.
+
 > [!TIP]
-> The easiest install path is through **HACS** once this repository is public. Click the badge above or follow the short HACS guide below.
+> This is the install path you should use right now.
 
-## Quick Install
+## Install With HACS Later
 
-### Install with HACS
+When this repository is public, install it as a HACS custom repository:
 
 1. Open **HACS** in Home Assistant.
 2. Open the top-right menu.
@@ -40,7 +57,7 @@ Instead of building Alarm Manager webhook rules by hand, you install the integra
 > [!NOTE]
 > If the integration does not show up after restart, refresh the browser and try again.
 
-### Configure it
+## Configuration
 
 When you add the integration, Home Assistant asks for:
 
@@ -104,34 +121,11 @@ The current automatic coverage focuses on the normal Protect 7.x camera detectio
 - `audio_alarm_smoke`
 - `audio_alarm_speak`
 
-## Private Repo Warning
-
-> [!IMPORTANT]
-> **HACS cannot use private GitHub repositories.**
->
-> HACS install works only when this repository is public.
->
-> Official HACS note: <https://www.hacs.xyz/docs/faq/private_repositories/>
-
-While the repo is still private, install it manually instead.
-
-## Manual Install While Private
-
-1. Copy `custom_components/ha_protect_bridge` into your Home Assistant config directory.
-2. Make sure the final path is:
-
-```text
-config/custom_components/ha_protect_bridge/
-```
-
-3. Restart Home Assistant.
-4. Go to **Settings -> Devices & services**.
-5. Click **Add Integration** and search for **HA Protect Bridge**.
-
 ## HACS Links
 
 - HACS download docs: <https://www.hacs.xyz/docs/use/download/download/>
 - HACS custom repositories: <https://www.hacs.xyz/docs/faq/custom_repositories/>
+- HACS private repositories: <https://www.hacs.xyz/docs/faq/private_repositories/>
 - My Home Assistant HACS links: <https://www.hacs.xyz/docs/use/my/>
 
 ## Why This Exists
