@@ -61,6 +61,8 @@ If your Protect host, credentials, or webhook base URL changes later, open the i
 
 The integration also exposes an options flow for tuning startup behavior. Right now the main option is **Initial event backfill limit**, which controls how many recent Protect events are fetched during initialization and resync. Set it to `0` to disable backfill entirely.
 
+If you need to debug a setup, Home Assistant's normal **Download diagnostics** action is supported for this integration and redacts credentials, host details, and webhook secrets automatically.
+
 ## What You Get
 
 ### Automatic Protect setup

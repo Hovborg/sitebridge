@@ -10,6 +10,7 @@ def _install_homeassistant_stubs() -> None:
 
     homeassistant = ModuleType("homeassistant")
     components = ModuleType("homeassistant.components")
+    diagnostics_module = ModuleType("homeassistant.components.diagnostics")
     webhook = ModuleType("homeassistant.components.webhook")
     sensor_module = ModuleType("homeassistant.components.sensor")
     config_entries = ModuleType("homeassistant.config_entries")
@@ -165,8 +166,19 @@ def _install_homeassistant_stubs() -> None:
     def callback(func):
         return func
 
+    def async_redact_data(data, to_redact):
+        if isinstance(data, dict):
+            return {
+                key: ("REDACTED" if key in to_redact else async_redact_data(value, to_redact))
+                for key, value in data.items()
+            }
+        if isinstance(data, list):
+            return [async_redact_data(value, to_redact) for value in data]
+        return data
+
     webhook.async_generate_path = lambda webhook_id: f"/api/webhook/{webhook_id}"
     webhook.async_generate_url = lambda _hass, webhook_id: f"http://ha.local/api/webhook/{webhook_id}"
+    diagnostics_module.async_redact_data = async_redact_data
     config_entries.ConfigFlow = ConfigFlow
     config_entries.OptionsFlow = OptionsFlow
     config_entries.OptionsFlowWithReload = OptionsFlowWithReload
@@ -183,6 +195,7 @@ def _install_homeassistant_stubs() -> None:
     entity.EntityCategory = EntityCategory
 
     components.webhook = webhook
+    components.diagnostics = diagnostics_module
     components.sensor = sensor_module
     helpers.config_validation = config_validation
     helpers.device_registry = device_registry
@@ -194,6 +207,7 @@ def _install_homeassistant_stubs() -> None:
 
     sys.modules["homeassistant"] = homeassistant
     sys.modules["homeassistant.components"] = components
+    sys.modules["homeassistant.components.diagnostics"] = diagnostics_module
     sys.modules["homeassistant.components.webhook"] = webhook
     sys.modules["homeassistant.components.sensor"] = sensor_module
     sys.modules["homeassistant.config_entries"] = config_entries
