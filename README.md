@@ -144,3 +144,5 @@ pip install -e ".[dev]"
 ruff check .
 pytest
 ```
+
+For GitHub-specific maintainer tasks, prefer GitHub CLI (`gh`) over email/browser triage when available. In practice that means `gh run list`, `gh run view`, `gh workflow list`, `gh pr status`, and `gh api` for CI, workflow, and repository state inspection, while regular local repository work still uses plain `git`.
