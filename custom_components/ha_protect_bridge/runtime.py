@@ -17,12 +17,14 @@ from .automation_payloads import (
 from .catalog import build_camera_catalog, camera_by_key, humanize_source, resolve_cameras
 from .const import (
     BACKFILL_EVENT_TYPES,
+    CONF_EVENT_BACKFILL_LIMIT,
     CONF_HOST,
     CONF_VERIFY_SSL,
     CONF_WEBHOOK_BASE_URL,
     CONF_WEBHOOK_ID,
+    DEFAULT_EVENT_BACKFILL_LIMIT,
     DOMAIN,
-    INITIAL_EVENT_BACKFILL_LIMIT,
+    MAX_EVENT_BACKFILL_LIMIT,
     SOURCE_ICONS,
 )
 from .normalize import normalize_event_payload
@@ -171,6 +173,7 @@ class HaProtectBridgeRuntime:
         return {
             "host": self.entry.data[CONF_HOST],
             "verify_ssl": self.entry.data[CONF_VERIFY_SSL],
+            "event_backfill_limit": self._event_backfill_limit(),
             "webhook_path": self.webhook_path,
             "webhook_url": self.webhook_url,
             "webhook_base_url_override": self.entry.data.get(CONF_WEBHOOK_BASE_URL),
@@ -302,9 +305,14 @@ class HaProtectBridgeRuntime:
         self._sensor_specs = sensor_specs
 
     async def _async_backfill_recent_events(self) -> None:
+        limit = self._event_backfill_limit()
+        if limit <= 0:
+            _LOGGER.debug("Skipping Protect event backfill because limit is %s", limit)
+            return
+
         try:
             events = await self._api.async_get_events(
-                limit=INITIAL_EVENT_BACKFILL_LIMIT,
+                limit=limit,
                 types=list(BACKFILL_EVENT_TYPES),
                 sorting="desc",
             )
@@ -318,6 +326,17 @@ class HaProtectBridgeRuntime:
                 continue
             timestamp = _timestamp_from_normalized(normalized)
             self._apply_normalized_event(normalized, timestamp)
+
+    def _event_backfill_limit(self) -> int:
+        value = self.entry.options.get(
+            CONF_EVENT_BACKFILL_LIMIT,
+            DEFAULT_EVENT_BACKFILL_LIMIT,
+        )
+        try:
+            limit = int(value)
+        except (TypeError, ValueError):
+            return DEFAULT_EVENT_BACKFILL_LIMIT
+        return max(0, min(limit, MAX_EVENT_BACKFILL_LIMIT))
 
     def _seed_timestamps_from_catalog(self) -> None:
         for camera in self.catalog.get("cameras") or []:

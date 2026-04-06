@@ -6,22 +6,31 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
 
 from .const import (
+    CONF_EVENT_BACKFILL_LIMIT,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
     CONF_WEBHOOK_BASE_URL,
     CONF_WEBHOOK_ID,
+    DEFAULT_EVENT_BACKFILL_LIMIT,
     DEFAULT_VERIFY_SSL,
     DOMAIN,
+    MAX_EVENT_BACKFILL_LIMIT,
 )
 from .protect_api import ProtectApiClient, ProtectApiError, ProtectAuthError
 
 
 class HaProtectBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: Any) -> HaProtectBridgeOptionsFlowHandler:
+        return HaProtectBridgeOptionsFlowHandler(config_entry)
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> Any:
         return await self._async_step_configure_user(user_input)
@@ -247,6 +256,55 @@ def _clear_webhook_base_url(user_input: Mapping[str, Any]) -> bool:
     return CONF_WEBHOOK_BASE_URL in user_input and not str(
         user_input[CONF_WEBHOOK_BASE_URL]
     ).strip()
+
+
+class HaProtectBridgeOptionsFlowHandler(config_entries.OptionsFlowWithReload):
+    def __init__(self, config_entry: Any) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> Any:
+        if user_input is not None:
+            return self.async_create_entry(
+                title="",
+                data={
+                    CONF_EVENT_BACKFILL_LIMIT: _clean_backfill_limit(
+                        user_input.get(CONF_EVENT_BACKFILL_LIMIT)
+                    )
+                },
+            )
+
+        defaults = {
+            CONF_EVENT_BACKFILL_LIMIT: self.config_entry.options.get(
+                CONF_EVENT_BACKFILL_LIMIT,
+                DEFAULT_EVENT_BACKFILL_LIMIT,
+            )
+        }
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                _build_options_schema(),
+                defaults,
+            ),
+        )
+
+
+def _build_options_schema() -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_EVENT_BACKFILL_LIMIT,
+                description={"suggested_value": DEFAULT_EVENT_BACKFILL_LIMIT},
+            ): vol.All(vol.Coerce(int), vol.Range(min=0, max=MAX_EVENT_BACKFILL_LIMIT)),
+        }
+    )
+
+
+def _clean_backfill_limit(value: Any) -> int:
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_EVENT_BACKFILL_LIMIT
+    return max(0, min(limit, MAX_EVENT_BACKFILL_LIMIT))
 
 
 async def _async_validate_input(user_input: dict[str, Any]) -> dict[str, str | None]:

@@ -129,12 +129,47 @@ def _install_homeassistant_stubs() -> None:
     class DeviceInfo(dict):
         pass
 
+    class OptionsFlow:
+        def __init__(self) -> None:
+            self.config_entry = None
+
+        def add_suggested_values_to_schema(self, schema, suggested_values):
+            del suggested_values
+            return schema
+
+        def async_show_form(
+            self,
+            *,
+            step_id=None,
+            data_schema=None,
+            errors=None,
+            description_placeholders=None,
+            last_step=None,
+            preview=None,
+        ):
+            del last_step, preview
+            return {
+                "type": "form",
+                "step_id": step_id,
+                "data_schema": data_schema,
+                "errors": errors or {},
+                "description_placeholders": description_placeholders,
+            }
+
+        def async_create_entry(self, *, title="", data=None):
+            return {"type": "create_entry", "title": title, "data": data or {}}
+
+    class OptionsFlowWithReload(OptionsFlow):
+        automatic_reload = True
+
     def callback(func):
         return func
 
     webhook.async_generate_path = lambda webhook_id: f"/api/webhook/{webhook_id}"
     webhook.async_generate_url = lambda _hass, webhook_id: f"http://ha.local/api/webhook/{webhook_id}"
     config_entries.ConfigFlow = ConfigFlow
+    config_entries.OptionsFlow = OptionsFlow
+    config_entries.OptionsFlowWithReload = OptionsFlowWithReload
     config_entries.SOURCE_REAUTH = "reauth"
     config_entries.SOURCE_RECONFIGURE = "reconfigure"
     config_entries.SOURCE_USER = "user"

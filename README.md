@@ -59,6 +59,8 @@ After setup, the integration will:
 
 If your Protect host, credentials, or webhook base URL changes later, open the integration in Home Assistant and use **Reconfigure**. Authentication failures will trigger Home Assistant's normal reauthentication flow.
 
+The integration also exposes an options flow for tuning startup behavior. Right now the main option is **Initial event backfill limit**, which controls how many recent Protect events are fetched during initialization and resync. Set it to `0` to disable backfill entirely.
+
 ## What You Get
 
 ### Automatic Protect setup

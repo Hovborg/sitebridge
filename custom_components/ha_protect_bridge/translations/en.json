@@ -43,5 +43,16 @@
       "reconfigure_successful": "Reconfiguration was successful.",
       "wrong_account": "The provided settings point to a different UniFi Protect system."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tune HA Protect Bridge",
+        "description": "Adjust startup backfill behavior. Set the backfill limit to 0 to disable recent-event backfill during initialization and resync.",
+        "data": {
+          "event_backfill_limit": "Initial event backfill limit"
+        }
+      }
+    }
   }
 }
