@@ -230,6 +230,55 @@ def test_bridge_plan_requires_device() -> None:
     assert "At least one --device value is required." in result.stderr
 
 
+def test_ha_resync_requires_yes() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "ha",
+            "resync",
+            "--base-url",
+            "https://ha.example",
+            "--token",
+            "secret",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Pass --yes" in result.stderr
+
+
+def test_ha_resync_posts_service_without_leaking_token(monkeypatch) -> None:
+    calls = []
+
+    class Response:
+        is_success = True
+        status_code = 200
+
+    def fake_post(url, **kwargs):
+        calls.append((url, kwargs))
+        return Response()
+
+    monkeypatch.setattr("unifi_protect_bridge.cli.httpx.post", fake_post)
+
+    result = runner.invoke(
+        app,
+        [
+            "ha",
+            "resync",
+            "--base-url",
+            "https://ha.example",
+            "--token",
+            "secret-token",
+            "--yes",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert calls[0][0] == "https://ha.example/api/services/unifi_protect_bridge/resync"
+    assert calls[0][1]["headers"]["Authorization"] == "Bearer secret-token"
+    assert "secret-token" not in result.stdout
+
+
 def test_cli_detection_metadata_matches_integration() -> None:
     assert CLI_KNOWN_DETECTION_TYPES == KNOWN_DETECTION_TYPES
     assert CLI_SOURCE_LABELS == SOURCE_LABELS

@@ -542,6 +542,90 @@ def ha_ping(
         raise typer.Exit(1)
 
 
+@ha_app.command("resync")
+def ha_resync(
+    base_url: Annotated[
+        str | None,
+        typer.Option("--base-url", help="Home Assistant base URL. Defaults to HA_BASE_URL."),
+    ] = None,
+    token: Annotated[
+        str | None,
+        typer.Option("--token", help="Long-lived access token. Defaults to HA_TOKEN."),
+    ] = None,
+    entry_id: Annotated[
+        str | None,
+        typer.Option("--entry-id", help="Optional UniFi Protect Bridge config entry id."),
+    ] = None,
+    timeout: Annotated[
+        float | None,
+        typer.Option("--timeout", help="HTTP timeout in seconds."),
+    ] = None,
+    verify_ssl: Annotated[
+        bool | None,
+        typer.Option("--verify-ssl/--no-verify-ssl", help="Override VERIFY_SSL."),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Confirm calling the Home Assistant resync service."),
+    ] = False,
+    json_output: JsonOption = False,
+) -> None:
+    """Call Home Assistant's bridge resync service after explicit confirmation."""
+    if not yes:
+        _fail("Pass --yes to call unifi_protect_bridge.resync.")
+
+    settings = Settings.load()
+    resolved_base_url = base_url or settings.ha_base_url
+    resolved_token = token or settings.ha_token
+    resolved_timeout = timeout or float(settings.request_timeout_seconds)
+    resolved_verify_ssl = settings.verify_ssl if verify_ssl is None else verify_ssl
+    if not resolved_base_url:
+        _fail("Missing Home Assistant base URL. Pass --base-url or set HA_BASE_URL.")
+    if not resolved_token:
+        _fail("Missing Home Assistant token. Pass --token or set HA_TOKEN.")
+
+    api_url = f"{resolved_base_url.rstrip('/')}/api/services/unifi_protect_bridge/resync"
+    payload = {"entry_id": entry_id} if entry_id else {}
+    try:
+        response = httpx.post(
+            api_url,
+            headers={
+                "Authorization": f"Bearer {resolved_token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=resolved_timeout,
+            verify=resolved_verify_ssl,
+        )
+    except httpx.HTTPError as err:
+        report = {
+            "ok": False,
+            "base_url": redact_url(resolved_base_url),
+            "service": "unifi_protect_bridge.resync",
+            "error": str(err),
+        }
+        if json_output:
+            _echo_json(report)
+        else:
+            typer.echo(f"Home Assistant resync failed: {err}")
+        raise typer.Exit(1) from err
+
+    report = {
+        "ok": response.is_success,
+        "base_url": redact_url(resolved_base_url),
+        "service": "unifi_protect_bridge.resync",
+        "status_code": response.status_code,
+    }
+    if json_output:
+        _echo_json(report)
+    else:
+        typer.echo(f"Called unifi_protect_bridge.resync: {response.status_code}")
+
+    if not response.is_success:
+        raise typer.Exit(1)
+
+
 def _render_payload(
     repo: Path,
     source: str,

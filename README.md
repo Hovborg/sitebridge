@@ -290,15 +290,18 @@ unifi-protect-bridge bridge plan --bootstrap protect-bootstrap.json --webhook-ur
 unifi-protect-bridge bridge plan person --device "84:78:48:28:72:5C" --webhook-url "https://ha.example/api/webhook/redacted"
 ```
 
-The CLI does not change Protect automations by default. Setup-changing commands
-must be added as explicit apply commands with confirmation and dry-run output
-first.
+The CLI does not change Protect automations by default.
 
-For a live Home Assistant reachability check, set `HA_BASE_URL` and `HA_TOKEN`, then run:
+For live Home Assistant checks, set `HA_BASE_URL` and `HA_TOKEN`, then run:
 
 ```bash
 unifi-protect-bridge ha ping
+unifi-protect-bridge ha resync --yes
 ```
+
+`ha resync --yes` calls Home Assistant's own `unifi_protect_bridge.resync`
+service, so Protect changes still go through the integration runtime and its
+bridge-owned automation safeguards.
 
 ## Development
 
