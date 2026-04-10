@@ -1,6 +1,6 @@
 from typer.testing import CliRunner
 
-from sitebridge.cli import app
+from unifi_protect_bridge.cli import app
 
 runner = CliRunner()
 
@@ -14,4 +14,4 @@ def test_help() -> None:
 def test_doctor() -> None:
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0
-    assert "Sitebridge doctor" in result.stdout
+    assert "UniFi Protect Bridge doctor" in result.stdout

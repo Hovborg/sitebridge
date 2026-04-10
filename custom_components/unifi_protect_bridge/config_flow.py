@@ -16,6 +16,7 @@ from .const import (
     CONF_VERIFY_SSL,
     CONF_WEBHOOK_BASE_URL,
     CONF_WEBHOOK_ID,
+    CONFIG_ENTRY_VERSION,
     DEFAULT_EVENT_BACKFILL_LIMIT,
     DEFAULT_VERIFY_SSL,
     DOMAIN,
@@ -25,7 +26,7 @@ from .protect_api import ProtectApiClient, ProtectApiError, ProtectAuthError
 
 
 class HaProtectBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = CONFIG_ENTRY_VERSION
 
     @staticmethod
     @callback

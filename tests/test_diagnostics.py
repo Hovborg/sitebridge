@@ -4,8 +4,8 @@ import asyncio
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-from custom_components.ha_protect_bridge.diagnostics import async_get_config_entry_diagnostics
-from custom_components.ha_protect_bridge.runtime import BridgeSensorSpec
+from custom_components.unifi_protect_bridge.diagnostics import async_get_config_entry_diagnostics
+from custom_components.unifi_protect_bridge.runtime import BridgeSensorSpec
 
 
 class _FakeRuntime:
@@ -64,9 +64,8 @@ class _FakeRuntime:
             "host": "192.168.1.1",
             "verify_ssl": False,
             "event_backfill_limit": 0,
-            "webhook_path": "/api/webhook/secret",
-            "webhook_url": "http://ha.local/api/webhook/secret",
-            "webhook_base_url_override": None,
+            "webhook_configured": True,
+            "webhook_base_url_override_configured": False,
             "nvr_id": "nvr-id",
             "nvr_name": "Dream Machine",
             "camera_count": 2,
@@ -112,8 +111,12 @@ def test_config_entry_diagnostics_redacts_and_summarizes_runtime() -> None:
 
     runtime = diagnostics["runtime"]
     assert runtime["status"]["host"] == "REDACTED"
-    assert runtime["status"]["webhook_url"] == "REDACTED"
+    assert "webhook_url" not in runtime["status"]
+    assert "webhook_path" not in runtime["status"]
+    assert runtime["status"]["webhook_configured"] is True
+    assert runtime["status"]["webhook_base_url_override_configured"] is False
     assert runtime["status"]["nvr_id"] == "REDACTED"
+    assert runtime["status"]["nvr_name"] == "REDACTED"
     assert runtime["status"]["managed_sources"] == ["motion", "ring", "audio_alarm_baby_cry"]
     assert runtime["catalog"]["camera_count"] == 2
     assert runtime["catalog"]["doorbell_count"] == 1

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect UniFi Protect",
-        "description": "Connect HA Protect Bridge to your UniFi Protect host. After setup, the integration will discover supported camera detections, create managed Protect webhook automations automatically, and expose timestamp sensors in Home Assistant.",
+        "description": "Connect UniFi Protect Bridge to your UniFi Protect host. After setup, the integration will discover supported camera detections, create managed Protect webhook automations automatically, and expose timestamp sensors in Home Assistant.",
         "data": {
           "host": "Protect host",
           "username": "Username",
@@ -47,7 +47,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Tune HA Protect Bridge",
+        "title": "Tune UniFi Protect Bridge",
         "description": "Adjust startup backfill behavior. Set the backfill limit to 0 to disable recent-event backfill during initialization and resync.",
         "data": {
           "event_backfill_limit": "Initial event backfill limit"

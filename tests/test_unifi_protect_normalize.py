@@ -1,4 +1,4 @@
-from custom_components.ha_protect_bridge.normalize import (
+from custom_components.unifi_protect_bridge.normalize import (
     normalize_event_payload,
     normalize_webhook_payload,
 )
@@ -37,7 +37,7 @@ def test_normalize_person_detection_from_alarm_manager_style_payload() -> None:
 
     assert normalized["primary_detection_type"] == "person"
     assert normalized["device_ids"] == ["1C6A1B0E8173"]
-    assert normalized["event_types"] == ["ha_protect_bridge_person"]
+    assert normalized["event_types"] == ["unifi_protect_bridge_person"]
 
 
 def test_normalize_query_only_doorbell_ring_alias() -> None:

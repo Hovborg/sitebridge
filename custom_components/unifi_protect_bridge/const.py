@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-DOMAIN = "ha_protect_bridge"
-NAME = "HA Protect Bridge"
+DOMAIN = "unifi_protect_bridge"
+NAME = "UniFi Protect Bridge"
 
 PLATFORMS = ("sensor",)
+CONFIG_ENTRY_VERSION = 2
 
 EVENT_WEBHOOK = f"{DOMAIN}_webhook"
 EVENT_DETECTION = f"{DOMAIN}_detection"
@@ -18,7 +19,7 @@ CONF_WEBHOOK_ID = "webhook_id"
 
 DEFAULT_VERIFY_SSL = False
 DEFAULT_TIMEOUT_SECONDS = 20
-SUPPORTED_METHODS = ("GET", "POST", "PUT")
+SUPPORTED_METHODS = ("POST", "PUT")
 DEFAULT_EVENT_BACKFILL_LIMIT = 100
 MAX_EVENT_BACKFILL_LIMIT = 100
 BACKFILL_EVENT_TYPES = (
@@ -33,7 +34,9 @@ SERVICE_SHOW_SETUP_INFO = "show_setup_info"
 SERVICE_RESYNC = "resync"
 NOTIFICATION_ID = f"{DOMAIN}_setup"
 STATUS_SENSOR_NAME = "Bridge Status"
-MANAGED_AUTOMATION_PREFIX = "HA Protect Bridge:"
+# Keep recognizing the old managed automation prefix after the public rename.
+LEGACY_MANAGED_AUTOMATION_PREFIX = "HA Protect Bridge:"
+MANAGED_AUTOMATION_PREFIX = "UniFi Protect Bridge:"
 MANAGED_AUTOMATION_TIMEOUT_MS = 30000
 
 KNOWN_DETECTION_TYPES = (
@@ -57,6 +60,9 @@ KNOWN_DETECTION_TYPES = (
     "audio_alarm_smoke",
     "audio_alarm_speak",
 )
+
+TYPED_DETECTION_EVENTS = tuple(f"{DOMAIN}_{detection}" for detection in KNOWN_DETECTION_TYPES)
+SELECTABLE_DETECTION_EVENTS = (EVENT_DETECTION, *TYPED_DETECTION_EVENTS)
 
 AUDIO_DETECTION_TYPES = (
     "audio_alarm_baby_cry",

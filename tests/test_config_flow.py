@@ -7,9 +7,9 @@ from typing import Any
 import pytest
 from homeassistant import config_entries
 
-from custom_components.ha_protect_bridge import config_flow
-from custom_components.ha_protect_bridge.config_flow import HaProtectBridgeConfigFlow
-from custom_components.ha_protect_bridge.const import (
+from custom_components.unifi_protect_bridge import config_flow
+from custom_components.unifi_protect_bridge.config_flow import HaProtectBridgeConfigFlow
+from custom_components.unifi_protect_bridge.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_USERNAME,

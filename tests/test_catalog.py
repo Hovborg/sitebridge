@@ -1,4 +1,4 @@
-from custom_components.ha_protect_bridge.catalog import build_camera_catalog, resolve_cameras
+from custom_components.unifi_protect_bridge.catalog import build_camera_catalog, resolve_cameras
 
 
 def test_build_camera_catalog_maps_normal_camera_and_doorbell_capabilities() -> None:

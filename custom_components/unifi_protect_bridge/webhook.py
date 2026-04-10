@@ -7,7 +7,7 @@ from typing import Any
 
 from aiohttp.web import Request, Response, json_response
 
-from .const import CONF_WEBHOOK_ID, DOMAIN, EVENT_DETECTION, EVENT_WEBHOOK
+from .const import CONF_WEBHOOK_ID, DOMAIN, EVENT_DETECTION, EVENT_WEBHOOK, SUPPORTED_METHODS
 from .entry_runtime import iter_entry_runtimes
 from .normalize import normalize_webhook_payload
 
@@ -15,6 +15,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_handle_protect_webhook(hass: Any, webhook_id: str, request: Request) -> Response:
+    if request.method not in SUPPORTED_METHODS:
+        return json_response(
+            {"status": HTTPStatus.METHOD_NOT_ALLOWED},
+            status=HTTPStatus.METHOD_NOT_ALLOWED,
+        )
+
     payload = await _read_payload(request)
     normalized = normalize_webhook_payload(payload, request.query)
     runtime = _runtime_for_webhook(hass, webhook_id)
@@ -22,19 +28,7 @@ async def async_handle_protect_webhook(hass: Any, webhook_id: str, request: Requ
     if runtime is not None:
         matched_cameras = await runtime.async_process_webhook(normalized)
 
-    event_data = {
-        **normalized,
-        "webhook_id": webhook_id,
-        "method": request.method,
-        "path": str(request.rel_url),
-        "matched_camera_names": [camera.get("name") for camera in matched_cameras],
-        "matched_camera_keys": [camera.get("camera_key") for camera in matched_cameras],
-        "headers": {
-            key: value
-            for key, value in request.headers.items()
-            if key.lower().startswith("x-")
-        },
-    }
+    event_data = _build_event_data(normalized, request.method, matched_cameras)
 
     hass.bus.async_fire(EVENT_WEBHOOK, event_data)
 
@@ -81,3 +75,23 @@ def _runtime_for_webhook(hass: Any, webhook_id: str) -> Any | None:
         if runtime.entry.data.get(CONF_WEBHOOK_ID) == webhook_id:
             return runtime
     return None
+
+
+def _build_event_data(
+    normalized: dict[str, Any],
+    method: str,
+    matched_cameras: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "alarm_name": normalized.get("alarm_name"),
+        "detection_types": list(normalized.get("detection_types") or []),
+        "primary_detection_type": normalized.get("primary_detection_type"),
+        "device_ids": list(normalized.get("device_ids") or []),
+        "source_values": list(normalized.get("source_values") or []),
+        "timestamp_ms": normalized.get("timestamp_ms"),
+        "timestamp_iso": normalized.get("timestamp_iso"),
+        "event_types": list(normalized.get("event_types") or []),
+        "method": method,
+        "matched_camera_names": [camera.get("name") for camera in matched_cameras],
+        "matched_camera_keys": [camera.get("camera_key") for camera in matched_cameras],
+    }

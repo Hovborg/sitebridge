@@ -1,23 +1,23 @@
-# HA Protect Bridge
+# UniFi Protect Bridge for Home Assistant
 
 <p align="center">
-  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=Hovborg&repository=sitebridge&category=integration">
+  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=Hovborg&repository=unifi-protect-bridge&category=integration">
     <img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open in HACS">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Hovborg/sitebridge/releases/latest">
-    <img src="https://img.shields.io/github/v/release/Hovborg/sitebridge?display_name=tag&style=for-the-badge" alt="Latest Release">
+  <a href="https://github.com/Hovborg/unifi-protect-bridge/releases/latest">
+    <img src="https://img.shields.io/github/v/release/Hovborg/unifi-protect-bridge?display_name=tag&style=for-the-badge" alt="Latest Release">
   </a>
-  <a href="https://github.com/Hovborg/sitebridge/actions/workflows/ci.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/Hovborg/sitebridge/ci.yml?branch=main&label=CI&style=for-the-badge" alt="CI">
+  <a href="https://github.com/Hovborg/unifi-protect-bridge/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/Hovborg/unifi-protect-bridge/ci.yml?branch=main&label=CI&style=for-the-badge" alt="CI">
   </a>
-  <a href="https://github.com/Hovborg/sitebridge/actions/workflows/hassfest.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/Hovborg/sitebridge/hassfest.yml?branch=main&label=Hassfest&style=for-the-badge" alt="Hassfest">
+  <a href="https://github.com/Hovborg/unifi-protect-bridge/actions/workflows/hassfest.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/Hovborg/unifi-protect-bridge/hassfest.yml?branch=main&label=Hassfest&style=for-the-badge" alt="Hassfest">
   </a>
-  <a href="https://github.com/Hovborg/sitebridge/actions/workflows/hacs.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/Hovborg/sitebridge/hacs.yml?branch=main&label=HACS%20Validation&style=for-the-badge" alt="HACS Validation">
+  <a href="https://github.com/Hovborg/unifi-protect-bridge/actions/workflows/hacs.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/Hovborg/unifi-protect-bridge/hacs.yml?branch=main&label=HACS%20Validation&style=for-the-badge" alt="HACS Validation">
   </a>
 </p>
 
@@ -33,7 +33,7 @@
 </p>
 
 <p align="center">
-  HA Protect Bridge discovers your cameras, provisions the Protect webhook automations for you,
+  UniFi Protect Bridge discovers your cameras, provisions the Protect webhook automations for you,
   and exposes clean detection sensors and typed events inside Home Assistant.
 </p>
 
@@ -48,11 +48,11 @@
 </p>
 
 > [!TIP]
-> If you want the shortest path, click **Open in HACS**, install the integration, restart Home Assistant, and add **HA Protect Bridge** from **Settings -> Devices & services**.
+> If you want the shortest path, click **Open in HACS**, install the integration, restart Home Assistant, and add **UniFi Protect Bridge** from **Settings -> Devices & services**.
 
 ## Why This Project
 
-UniFi Protect can already send webhook-based automations, but maintaining those rules by hand gets tedious fast when you have multiple cameras and multiple detection types. HA Protect Bridge turns that into a normal Home Assistant integration flow and keeps the Protect side aligned automatically.
+UniFi Protect can already send webhook-based automations, but maintaining those rules by hand gets tedious fast when you have multiple cameras and multiple detection types. UniFi Protect Bridge turns that into a normal Home Assistant integration flow and keeps the Protect side aligned automatically.
 
 | Auto-provisions Protect | Feels native in Home Assistant | Built for real debugging |
 | --- | --- | --- |
@@ -63,7 +63,7 @@ UniFi Protect can already send webhook-based automations, but maintaining those 
 ```mermaid
 flowchart LR
     Protect[UniFi Protect]
-    Bridge[HA Protect Bridge]
+    Bridge[UniFi Protect Bridge]
     Automations[Managed Protect webhook automations]
     Webhook[Home Assistant webhook endpoint]
     Sensors[Timestamp sensors]
@@ -89,15 +89,31 @@ After setup, the integration will:
 
 1. Open **HACS** in Home Assistant.
 2. Open the top-right menu and select **Custom repositories**.
-3. Add `https://github.com/Hovborg/sitebridge`.
+3. Add `https://github.com/Hovborg/unifi-protect-bridge`.
 4. Choose category **Integration**.
-5. Open **HA Protect Bridge** in HACS and click **Download**.
+5. Open **UniFi Protect Bridge** in HACS and click **Download**.
 6. Restart Home Assistant.
 7. Go to **Settings -> Devices & services -> Add Integration**.
-8. Search for **HA Protect Bridge**.
+8. Search for **UniFi Protect Bridge**.
 
 > [!NOTE]
 > If the integration does not show up after restart, refresh the browser and try again.
+
+## Upgrade From Older Releases
+
+Version `0.2.9` renames the integration domain from `ha_protect_bridge` to
+`unifi_protect_bridge`.
+
+For existing installations:
+
+1. Remove the old **HA Protect Bridge** integration entry from Home Assistant.
+2. Update the HACS repository URL to `https://github.com/Hovborg/unifi-protect-bridge`.
+3. Restart Home Assistant.
+4. Add **UniFi Protect Bridge** from **Settings -> Devices & services**.
+5. Update automations that call old services or listen for old events.
+
+Existing Protect-side automations with the old managed prefix are still recognized, so the
+bridge can update them instead of creating duplicate Protect rules.
 
 ## Configure It
 
@@ -143,8 +159,8 @@ If you need a stable low-load setup, start with `0` and increase later only if y
 
 The integration registers these services:
 
-- `ha_protect_bridge.show_setup_info`
-- `ha_protect_bridge.resync`
+- `unifi_protect_bridge.show_setup_info`
+- `unifi_protect_bridge.resync`
 
 Entity IDs depend on your NVR and camera names, but they look like this:
 
@@ -152,8 +168,29 @@ Entity IDs depend on your NVR and camera names, but they look like this:
 - `sensor.<nvr>_bridge_last_person`
 - `sensor.<camera>_last_ring`
 - `sensor.<camera>_last_vehicle`
-- `ha_protect_bridge_person`
-- `ha_protect_bridge_package`
+
+Every incoming webhook fires `unifi_protect_bridge_webhook`. Recognized detections also fire:
+
+- `unifi_protect_bridge_detection`
+- `unifi_protect_bridge_motion`
+- `unifi_protect_bridge_person`
+- `unifi_protect_bridge_vehicle`
+- `unifi_protect_bridge_animal`
+- `unifi_protect_bridge_package`
+- `unifi_protect_bridge_license_plate_of_interest`
+- `unifi_protect_bridge_ring`
+- `unifi_protect_bridge_face_unknown`
+- `unifi_protect_bridge_face_known`
+- `unifi_protect_bridge_face_of_interest`
+- `unifi_protect_bridge_audio_alarm_baby_cry`
+- `unifi_protect_bridge_audio_alarm_bark`
+- `unifi_protect_bridge_audio_alarm_burglar`
+- `unifi_protect_bridge_audio_alarm_car_horn`
+- `unifi_protect_bridge_audio_alarm_co`
+- `unifi_protect_bridge_audio_alarm_glass_break`
+- `unifi_protect_bridge_audio_alarm_siren`
+- `unifi_protect_bridge_audio_alarm_smoke`
+- `unifi_protect_bridge_audio_alarm_speak`
 
 ## Supported Detections
 
@@ -191,16 +228,16 @@ Use Home Assistant's normal **Download diagnostics** action on the config entry.
 
 Call:
 
-- `ha_protect_bridge.resync`
+- `unifi_protect_bridge.resync`
 
 That will rebuild the catalog and refresh managed automations when needed.
 
 ## Manual Install
 
-If you do not want to use HACS, copy `custom_components/ha_protect_bridge` into your Home Assistant config directory so the final path is:
+If you do not want to use HACS, copy `custom_components/unifi_protect_bridge` into your Home Assistant config directory so the final path is:
 
 ```text
-config/custom_components/ha_protect_bridge/
+config/custom_components/unifi_protect_bridge/
 ```
 
 Then restart Home Assistant and add the integration from **Settings -> Devices & services**.
@@ -210,8 +247,8 @@ Then restart Home Assistant and add the integration from **Settings -> Devices &
 - HACS custom repository docs: <https://www.hacs.xyz/docs/faq/custom_repositories/>
 - HACS download docs: <https://www.hacs.xyz/docs/use/download/download/>
 - My Home Assistant HACS links: <https://www.hacs.xyz/docs/use/my/>
-- Latest GitHub release: <https://github.com/Hovborg/sitebridge/releases/latest>
-- Issue tracker: <https://github.com/Hovborg/sitebridge/issues>
+- Latest GitHub release: <https://github.com/Hovborg/unifi-protect-bridge/releases/latest>
+- Issue tracker: <https://github.com/Hovborg/unifi-protect-bridge/issues>
 
 ## Technical Note
 
@@ -223,7 +260,7 @@ Then restart Home Assistant and add the integration from **Settings -> Devices &
 ## Development
 
 ```bash
-cd /path/to/sitebridge
+cd /path/to/unifi-protect-bridge
 python3.14 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"

@@ -20,3 +20,22 @@ jobs:
         run: ruff check .
       - name: Tests
         run: pytest
+      - name: Home Assistant API smoke
+        run: |
+          python -m pip install "homeassistant>=2026.3,<2026.4"
+          python - <<'PY'
+          import inspect
+
+          from homeassistant import config_entries
+          from homeassistant.components import webhook
+
+          import custom_components.unifi_protect_bridge as integration
+
+          register_params = inspect.signature(webhook.async_register).parameters
+
+          assert hasattr(config_entries, "OptionsFlowWithReload")
+          assert hasattr(config_entries.ConfigFlow, "async_update_reload_and_abort")
+          assert "allowed_methods" in register_params
+          assert "local_only" in register_params
+          assert integration.CONFIG_SCHEMA is not None
+          PY

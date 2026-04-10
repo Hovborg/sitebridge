@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typer
 
-from sitebridge.config import Settings
+from unifi_protect_bridge.config import Settings
 
 app = typer.Typer(
     help="Unofficial CLI scaffold for Home Assistant and official UniFi APIs.",
@@ -31,7 +31,7 @@ def doctor() -> None:
     """Show local configuration readiness."""
     settings = Settings.load()
     lines = [
-        "Sitebridge doctor",
+        "UniFi Protect Bridge doctor",
         f"HA_BASE_URL: {_flag(settings.ha_base_url)}",
         f"HA_TOKEN: {_flag(settings.ha_token)}",
         f"UNIFI_SITE_MANAGER_API_KEY: {_flag(settings.unifi_site_manager_api_key)}",

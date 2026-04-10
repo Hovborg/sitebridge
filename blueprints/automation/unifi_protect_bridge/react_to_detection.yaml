@@ -1,0 +1,42 @@
+blueprint:
+  name: UniFi Protect Bridge - React To Detection
+  description: React to a selected UniFi Protect Bridge detection event.
+  domain: automation
+  input:
+    detection_event:
+      name: Detection event
+      selector:
+        select:
+          options:
+            - unifi_protect_bridge_detection
+            - unifi_protect_bridge_motion
+            - unifi_protect_bridge_person
+            - unifi_protect_bridge_vehicle
+            - unifi_protect_bridge_animal
+            - unifi_protect_bridge_package
+            - unifi_protect_bridge_license_plate_of_interest
+            - unifi_protect_bridge_ring
+            - unifi_protect_bridge_face_unknown
+            - unifi_protect_bridge_face_known
+            - unifi_protect_bridge_face_of_interest
+            - unifi_protect_bridge_audio_alarm_baby_cry
+            - unifi_protect_bridge_audio_alarm_bark
+            - unifi_protect_bridge_audio_alarm_burglar
+            - unifi_protect_bridge_audio_alarm_car_horn
+            - unifi_protect_bridge_audio_alarm_co
+            - unifi_protect_bridge_audio_alarm_glass_break
+            - unifi_protect_bridge_audio_alarm_siren
+            - unifi_protect_bridge_audio_alarm_smoke
+            - unifi_protect_bridge_audio_alarm_speak
+    actions:
+      name: Actions
+      selector:
+        action: {}
+
+mode: single
+
+triggers:
+  - trigger: event
+    event_type: !input detection_event
+
+actions: !input actions

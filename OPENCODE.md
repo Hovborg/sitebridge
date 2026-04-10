@@ -3,9 +3,9 @@
 ## Start Here
 
 - `README.md`
-- `custom_components/ha_protect_bridge/`
-- `custom_components/ha_protect_bridge/runtime.py`
-- `custom_components/ha_protect_bridge/webhook.py`
+- `custom_components/unifi_protect_bridge/`
+- `custom_components/unifi_protect_bridge/runtime.py`
+- `custom_components/unifi_protect_bridge/webhook.py`
 
 ## Notes
 

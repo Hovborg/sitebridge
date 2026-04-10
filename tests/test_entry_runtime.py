@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from custom_components.ha_protect_bridge.entry_runtime import (
+from custom_components.unifi_protect_bridge.entry_runtime import (
     get_entry_runtime,
     iter_entry_runtimes,
 )
-from custom_components.ha_protect_bridge.webhook import _runtime_for_webhook
+from custom_components.unifi_protect_bridge.webhook import _runtime_for_webhook
 
 
 def test_get_entry_runtime_reads_runtime_data() -> None:

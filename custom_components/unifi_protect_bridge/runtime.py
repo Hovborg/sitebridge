@@ -118,7 +118,7 @@ class HaProtectBridgeRuntime:
 
     async def async_process_webhook(self, normalized: dict[str, Any]) -> list[dict[str, Any]]:
         timestamp = _timestamp_from_normalized(normalized)
-        self.last_webhook_at = timestamp
+        self.last_webhook_at = datetime.now(UTC)
         changed, matched_cameras = self._apply_normalized_event(normalized, timestamp)
 
         if changed:
@@ -174,9 +174,10 @@ class HaProtectBridgeRuntime:
             "host": self.entry.data[CONF_HOST],
             "verify_ssl": self.entry.data[CONF_VERIFY_SSL],
             "event_backfill_limit": self._event_backfill_limit(),
-            "webhook_path": self.webhook_path,
-            "webhook_url": self.webhook_url,
-            "webhook_base_url_override": self.entry.data.get(CONF_WEBHOOK_BASE_URL),
+            "webhook_configured": self.webhook_url is not None,
+            "webhook_base_url_override_configured": bool(
+                self.entry.data.get(CONF_WEBHOOK_BASE_URL)
+            ),
             "nvr_id": self.catalog.get("nvr_id"),
             "nvr_name": self.catalog.get("nvr_name"),
             "camera_count": len(self.catalog.get("cameras") or []),

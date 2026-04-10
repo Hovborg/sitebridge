@@ -13,11 +13,12 @@ def build_setup_message(
     automation_count: int | None = None,
 ) -> str:
     detection_types = list(detection_types)
+    webhook_status = "registered" if webhook_path or webhook_url else "not currently available"
     lines = [
-        "HA Protect Bridge is ready.",
+        "UniFi Protect Bridge is ready.",
         "",
-        f"Webhook URL: `{webhook_url or 'Not currently available'}`",
-        f"Webhook path: `{webhook_path}`",
+        f"Webhook endpoint: `{webhook_status}`",
+        "Protect webhook delivery is managed automatically; no manual URL copy is needed.",
         "",
         "Automatic setup completed:",
         "1. The integration logged in to UniFi Protect.",
@@ -40,7 +41,7 @@ def build_setup_message(
             f"- `{EVENT_DETECTION}`",
         ]
     )
-    lines.extend(f"- `ha_protect_bridge_{detection}`" for detection in detection_types)
+    lines.extend(f"- `unifi_protect_bridge_{detection}`" for detection in detection_types)
     lines.extend(
         [
             "",

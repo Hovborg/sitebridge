@@ -4,9 +4,18 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from .const import AUDIO_DETECTION_TYPES, MANAGED_AUTOMATION_PREFIX, MANAGED_AUTOMATION_TIMEOUT_MS
+from .const import (
+    AUDIO_DETECTION_TYPES,
+    LEGACY_MANAGED_AUTOMATION_PREFIX,
+    MANAGED_AUTOMATION_PREFIX,
+    MANAGED_AUTOMATION_TIMEOUT_MS,
+)
 
 _HTTP_REQUEST = "HTTP_REQUEST"
+_MANAGED_AUTOMATION_PREFIXES = (
+    MANAGED_AUTOMATION_PREFIX,
+    LEGACY_MANAGED_AUTOMATION_PREFIX,
+)
 
 
 def build_managed_automation_name(source: str) -> str:
@@ -67,9 +76,10 @@ def build_webhook_target_url(webhook_url: str, source: str) -> str:
 
 def managed_source_from_automation(automation: Mapping[str, Any]) -> str | None:
     name = _string(automation.get("name"))
-    prefix = f"{MANAGED_AUTOMATION_PREFIX} "
-    if name and name.startswith(prefix):
-        return name[len(prefix) :].strip() or None
+    for prefix in _MANAGED_AUTOMATION_PREFIXES:
+        full_prefix = f"{prefix} "
+        if name and name.startswith(full_prefix):
+            return name[len(full_prefix) :].strip() or None
 
     metadata = _http_request_metadata(automation)
     url = _string(metadata.get("url"))
@@ -92,13 +102,24 @@ def map_managed_automations(
 def automation_needs_replace(existing: Mapping[str, Any], desired: Mapping[str, Any]) -> bool:
     return any(
         (
-            _string(existing.get("name")) != _string(desired.get("name")),
+            not _managed_names_match(existing, desired),
             bool(existing.get("enable", True)) != bool(desired.get("enable", True)),
             _normalized_sources(existing) != _normalized_sources(desired),
             _normalized_conditions(existing) != _normalized_conditions(desired),
             _normalized_http_request(existing) != _normalized_http_request(desired),
         )
     )
+
+
+def _managed_names_match(existing: Mapping[str, Any], desired: Mapping[str, Any]) -> bool:
+    existing_name = _string(existing.get("name"))
+    desired_name = _string(desired.get("name"))
+    if existing_name == desired_name:
+        return True
+
+    desired_source = managed_source_from_automation(desired)
+    existing_source = managed_source_from_automation(existing)
+    return bool(desired_source and existing_source == desired_source)
 
 
 def _normalized_sources(automation: Mapping[str, Any]) -> tuple[str, ...]:

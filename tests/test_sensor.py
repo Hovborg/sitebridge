@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
-from custom_components.ha_protect_bridge.runtime import BridgeSensorSpec
-from custom_components.ha_protect_bridge.sensor import (
+from custom_components.unifi_protect_bridge.runtime import BridgeSensorSpec
+from custom_components.unifi_protect_bridge.sensor import (
     HaProtectBridgeTimestampSensor,
     async_setup_entry,
 )

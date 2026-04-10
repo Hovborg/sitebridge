@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
-from custom_components.ha_protect_bridge.config_flow import (
+from custom_components.unifi_protect_bridge.config_flow import (
     HaProtectBridgeConfigFlow,
     HaProtectBridgeOptionsFlowHandler,
 )
-from custom_components.ha_protect_bridge.const import (
+from custom_components.unifi_protect_bridge.const import (
     CONF_EVENT_BACKFILL_LIMIT,
     DEFAULT_EVENT_BACKFILL_LIMIT,
 )

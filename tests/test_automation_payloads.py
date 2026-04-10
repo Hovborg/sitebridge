@@ -1,4 +1,4 @@
-from custom_components.ha_protect_bridge.automation_payloads import (
+from custom_components.unifi_protect_bridge.automation_payloads import (
     automation_needs_replace,
     build_managed_automation_name,
     build_managed_automation_payload,
@@ -35,6 +35,33 @@ def test_managed_source_from_automation_reads_name_prefix() -> None:
     )
 
     assert managed_source_from_automation(payload) == "audio_alarm_smoke"
+
+
+def test_managed_source_from_automation_accepts_legacy_name_prefix() -> None:
+    payload = build_managed_automation_payload(
+        "person",
+        ["84784828725C"],
+        "http://ha.local/api/webhook/test",
+    )
+    payload["name"] = "UniFi Protect Bridge: person"
+
+    assert managed_source_from_automation(payload) == "person"
+
+
+def test_automation_needs_replace_accepts_legacy_name_prefix() -> None:
+    existing = build_managed_automation_payload(
+        "person",
+        ["84784828725C"],
+        "http://ha.local/api/webhook/test",
+    )
+    existing["name"] = "UniFi Protect Bridge: person"
+    desired = build_managed_automation_payload(
+        "person",
+        ["84784828725C"],
+        "http://ha.local/api/webhook/test",
+    )
+
+    assert automation_needs_replace(existing, desired) is False
 
 
 def test_automation_needs_replace_detects_url_change() -> None:
