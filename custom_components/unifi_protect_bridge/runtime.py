@@ -12,7 +12,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .automation_payloads import (
     automation_needs_replace,
     build_managed_automation_payload,
-    map_managed_automations,
+    group_managed_automations,
 )
 from .catalog import build_camera_catalog, camera_by_key, humanize_source, resolve_cameras
 from .const import (
@@ -229,17 +229,23 @@ class HaProtectBridgeRuntime:
 
     async def _async_sync_managed_automations(self, automations: list[dict[str, Any]]) -> None:
         desired_by_source = self._desired_automations()
-        existing_by_source = map_managed_automations(automations)
+        existing_by_source = group_managed_automations(automations)
         managed: dict[str, dict[str, Any]] = {}
 
         for source, desired in desired_by_source.items():
-            existing = existing_by_source.pop(source, None)
+            existing_candidates = existing_by_source.pop(source, [])
+            existing = existing_candidates[0] if existing_candidates else None
+            duplicates = existing_candidates[1:]
             if existing and not automation_needs_replace(existing, desired):
+                await self._async_delete_duplicate_automations(source, duplicates)
                 managed[source] = dict(existing)
                 continue
 
-            if existing and existing.get("id"):
-                await self._api.async_delete_automation(existing["id"])
+            deleted_existing = await self._async_delete_automations(
+                source,
+                existing_candidates,
+            )
+            if deleted_existing:
                 _LOGGER.info("Replaced managed Protect automation for %s", source)
             else:
                 _LOGGER.info("Creating managed Protect automation for %s", source)
@@ -247,13 +253,32 @@ class HaProtectBridgeRuntime:
             created = await self._api.async_create_automation(desired)
             managed[source] = created or desired
 
-        for source, stale in existing_by_source.items():
-            stale_id = stale.get("id")
-            if stale_id:
-                await self._api.async_delete_automation(stale_id)
+        for source, stale_items in existing_by_source.items():
+            if await self._async_delete_automations(source, stale_items):
                 _LOGGER.info("Removed stale managed Protect automation for %s", source)
 
         self._managed_automations = managed
+
+    async def _async_delete_duplicate_automations(
+        self,
+        source: str,
+        duplicates: list[dict[str, Any]],
+    ) -> None:
+        if await self._async_delete_automations(source, duplicates):
+            _LOGGER.info("Removed duplicate managed Protect automation for %s", source)
+
+    async def _async_delete_automations(
+        self,
+        _source: str,
+        automations: list[dict[str, Any]],
+    ) -> bool:
+        deleted = False
+        for automation in automations:
+            automation_id = automation.get("id")
+            if automation_id:
+                await self._api.async_delete_automation(automation_id)
+                deleted = True
+        return deleted
 
     def _desired_automations(self) -> dict[str, dict[str, Any]]:
         desired: dict[str, dict[str, Any]] = {}

@@ -3,7 +3,9 @@ from custom_components.unifi_protect_bridge.automation_payloads import (
     build_managed_automation_name,
     build_managed_automation_payload,
     build_webhook_target_url,
+    group_managed_automations,
     managed_source_from_automation,
+    map_managed_automations,
 )
 
 
@@ -43,9 +45,20 @@ def test_managed_source_from_automation_accepts_legacy_name_prefix() -> None:
         ["84784828725C"],
         "http://ha.local/api/webhook/test",
     )
-    payload["name"] = "UniFi Protect Bridge: person"
+    payload["name"] = "HA Protect Bridge: person"
 
     assert managed_source_from_automation(payload) == "person"
+
+
+def test_managed_source_from_automation_ignores_unprefixed_webhook_url() -> None:
+    payload = build_managed_automation_payload(
+        "person",
+        ["84784828725C"],
+        "http://ha.local/api/webhook/test",
+    )
+    payload["name"] = "User managed person webhook"
+
+    assert managed_source_from_automation(payload) is None
 
 
 def test_automation_needs_replace_accepts_legacy_name_prefix() -> None:
@@ -54,7 +67,7 @@ def test_automation_needs_replace_accepts_legacy_name_prefix() -> None:
         ["84784828725C"],
         "http://ha.local/api/webhook/test",
     )
-    existing["name"] = "UniFi Protect Bridge: person"
+    existing["name"] = "HA Protect Bridge: person"
     desired = build_managed_automation_payload(
         "person",
         ["84784828725C"],
@@ -62,6 +75,27 @@ def test_automation_needs_replace_accepts_legacy_name_prefix() -> None:
     )
 
     assert automation_needs_replace(existing, desired) is False
+
+
+def test_managed_automation_mapping_prefers_current_prefix_and_groups_duplicates() -> None:
+    legacy = build_managed_automation_payload(
+        "person",
+        ["84784828725C"],
+        "http://ha.local/api/webhook/test",
+    )
+    legacy["id"] = "legacy"
+    legacy["name"] = "HA Protect Bridge: person"
+    current = build_managed_automation_payload(
+        "person",
+        ["84784828725C"],
+        "http://ha.local/api/webhook/test",
+    )
+    current["id"] = "current"
+
+    grouped = group_managed_automations([legacy, current])
+
+    assert [item["id"] for item in grouped["person"]] == ["current", "legacy"]
+    assert map_managed_automations([legacy, current])["person"]["id"] == "current"
 
 
 def test_automation_needs_replace_detects_url_change() -> None:

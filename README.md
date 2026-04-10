@@ -115,6 +115,10 @@ For existing installations:
 Existing Protect-side automations with the old managed prefix are still recognized, so the
 bridge can update them instead of creating duplicate Protect rules.
 
+Home Assistant entity IDs may change after removing and adding the renamed integration.
+Check dashboards, automations, scripts, and helpers for old `ha_protect_bridge` service,
+event, or entity references after the upgrade.
+
 ## Configure It
 
 When you add the integration, Home Assistant asks for:

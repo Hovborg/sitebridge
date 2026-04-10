@@ -81,21 +81,31 @@ def managed_source_from_automation(automation: Mapping[str, Any]) -> str | None:
         if name and name.startswith(full_prefix):
             return name[len(full_prefix) :].strip() or None
 
-    metadata = _http_request_metadata(automation)
-    url = _string(metadata.get("url"))
-    if not url:
-        return None
-    return dict(parse_qsl(urlsplit(url).query)).get("source")
+    return None
 
 
 def map_managed_automations(
     automations: Iterable[Mapping[str, Any]],
 ) -> dict[str, Mapping[str, Any]]:
-    managed: dict[str, Mapping[str, Any]] = {}
+    return {
+        source: items[0]
+        for source, items in group_managed_automations(automations).items()
+        if items
+    }
+
+
+def group_managed_automations(
+    automations: Iterable[Mapping[str, Any]],
+) -> dict[str, list[Mapping[str, Any]]]:
+    managed: dict[str, list[Mapping[str, Any]]] = {}
     for automation in automations:
         source = managed_source_from_automation(automation)
-        if source and source not in managed:
-            managed[source] = automation
+        if source:
+            managed.setdefault(source, []).append(automation)
+
+    for items in managed.values():
+        items.sort(key=_managed_automation_rank)
+
     return managed
 
 
@@ -120,6 +130,15 @@ def _managed_names_match(existing: Mapping[str, Any], desired: Mapping[str, Any]
     desired_source = managed_source_from_automation(desired)
     existing_source = managed_source_from_automation(existing)
     return bool(desired_source and existing_source == desired_source)
+
+
+def _managed_automation_rank(automation: Mapping[str, Any]) -> int:
+    name = _string(automation.get("name")) or ""
+    if name.startswith(f"{MANAGED_AUTOMATION_PREFIX} "):
+        return 0
+    if name.startswith(f"{LEGACY_MANAGED_AUTOMATION_PREFIX} "):
+        return 1
+    return 2
 
 
 def _normalized_sources(automation: Mapping[str, Any]) -> tuple[str, ...]:

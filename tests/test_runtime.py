@@ -85,6 +85,71 @@ def test_runtime_last_webhook_at_uses_receive_time_not_event_timestamp() -> None
     assert runtime.last_webhook_at >= before
 
 
+def test_runtime_sync_removes_duplicate_managed_automations() -> None:
+    runtime = HaProtectBridgeRuntime(SimpleNamespace(), _mock_entry({}))
+    runtime.catalog = {
+        "nvr_id": "nvr",
+        "nvr_name": "Protect",
+        "lookup": {},
+        "managed_sources": ["person"],
+        "cameras": [
+            {
+                "device_mac": "84784828725C",
+                "supported_sources": ["person"],
+            }
+        ],
+    }
+    runtime._webhook_url = "http://ha.local/api/webhook/test"
+    deleted: list[str] = []
+    created: list[dict[str, object]] = []
+
+    async def _async_delete_automation(automation_id: str) -> None:
+        deleted.append(automation_id)
+
+    async def _async_create_automation(payload: dict[str, object]) -> dict[str, object]:
+        created.append(payload)
+        return {"id": "created", **payload}
+
+    runtime._api.async_delete_automation = _async_delete_automation
+    runtime._api.async_create_automation = _async_create_automation
+
+    current = {
+        "id": "current",
+        "name": "UniFi Protect Bridge: person",
+        "enable": True,
+        "sources": [{"device": "84784828725C"}],
+        "conditions": [{"condition": {"type": "is", "source": "person"}}],
+        "actions": [
+            {
+                "type": "HTTP_REQUEST",
+                "metadata": {
+                    "url": "http://ha.local/api/webhook/test?source=person",
+                    "method": "POST",
+                    "timeout": 30000,
+                    "useThumbnail": True,
+                    "headers": [],
+                },
+            }
+        ],
+    }
+    legacy_duplicate = {**current, "id": "legacy", "name": "HA Protect Bridge: person"}
+    user_automation = {
+        **current,
+        "id": "user",
+        "name": "User managed person webhook",
+    }
+
+    asyncio.run(
+        runtime._async_sync_managed_automations(
+            [legacy_duplicate, user_automation, current],
+        )
+    )
+
+    assert deleted == ["legacy"]
+    assert created == []
+    assert runtime._managed_automations["person"]["id"] == "current"
+
+
 def _mock_entry(options: dict[str, int]) -> SimpleNamespace:
     return SimpleNamespace(
         entry_id="entry-1",
