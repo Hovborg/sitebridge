@@ -23,7 +23,7 @@ def test_help() -> None:
 def test_version() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert "UniFi Protect Bridge 0.2.11" in result.stdout
+    assert "UniFi Protect Bridge 0.2.12" in result.stdout
 
 
 def test_doctor() -> None:
@@ -46,7 +46,7 @@ def test_integration_manifest_json() -> None:
     assert result.exit_code == 0
     manifest = json.loads(result.stdout)
     assert manifest["domain"] == "unifi_protect_bridge"
-    assert manifest["version"] == "0.2.11"
+    assert manifest["version"] == "0.2.12"
 
 
 def test_webhook_normalize_redacts_device_ids_by_default(tmp_path) -> None:

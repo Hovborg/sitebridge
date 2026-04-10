@@ -584,7 +584,11 @@ def ha_resync(
     if not resolved_token:
         _fail("Missing Home Assistant token. Pass --token or set HA_TOKEN.")
 
-    api_url = f"{resolved_base_url.rstrip('/')}/api/services/unifi_protect_bridge/resync"
+    api_url = _ha_service_url(
+        resolved_base_url,
+        "unifi_protect_bridge",
+        "resync",
+    )
     payload = {"entry_id": entry_id} if entry_id else {}
     try:
         response = httpx.post(
@@ -740,13 +744,21 @@ def _echo_json(value: Any) -> None:
 
 
 def _ha_api_url(base_url: str) -> str:
+    return f"{_ha_base_url(base_url)}/api/"
+
+
+def _ha_service_url(base_url: str, domain: str, service: str) -> str:
+    return f"{_ha_base_url(base_url)}/api/services/{domain}/{service}"
+
+
+def _ha_base_url(base_url: str) -> str:
     text = base_url.strip()
     if "://" not in text:
         text = f"http://{text}"
     parsed = urlsplit(text)
     if not parsed.scheme or not parsed.netloc:
         _fail(f"Invalid Home Assistant base URL: {base_url}")
-    return f"{text.rstrip('/')}/api/"
+    return text.rstrip("/")
 
 
 def _ok(value: bool) -> str:
