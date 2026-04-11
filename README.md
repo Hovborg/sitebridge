@@ -275,6 +275,9 @@ bridge-owned Protect webhook automations itself.
 Use the separate CLI only for terminal-based diagnostics, Protect login checks,
 diff/apply support, and calling the integration resync service manually.
 
+See [`docs/project-split.md`](docs/project-split.md) for the repository split
+and shared contract.
+
 ## Development
 
 ```bash
