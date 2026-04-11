@@ -97,3 +97,76 @@ def test_resolve_cameras_matches_on_normalized_mac() -> None:
 
     assert len(resolved) == 1
     assert resolved[0]["name"] == "Kitchen"
+
+
+def test_build_camera_catalog_skips_motion_when_explicitly_disabled() -> None:
+    catalog = build_camera_catalog(
+        {
+            "cameras": [
+                {
+                    "id": "cam-no-motion",
+                    "mac": "84:78:48:28:72:5C",
+                    "name": "No Motion",
+                    "featureFlags": {"hasMotionZones": False},
+                    "smartDetectSettings": {"objectTypes": ["person"], "audioTypes": []},
+                },
+                {
+                    "id": "cam-motion-off",
+                    "mac": "1C:6A:1B:0E:81:73",
+                    "name": "Motion Off",
+                    "motionSettings": {"enabled": False},
+                    "smartDetectSettings": {"objectTypes": [], "audioTypes": []},
+                },
+            ]
+        }
+    )
+
+    no_motion = next(
+        camera for camera in catalog["cameras"] if camera["camera_id"] == "cam-no-motion"
+    )
+    motion_off = next(
+        camera for camera in catalog["cameras"] if camera["camera_id"] == "cam-motion-off"
+    )
+
+    assert no_motion["supported_sources"] == ["person"]
+    assert motion_off["supported_sources"] == []
+    assert catalog["managed_sources"] == ["person"]
+
+
+def test_build_camera_catalog_skips_motion_without_history_zones_or_algorithms() -> None:
+    catalog = build_camera_catalog(
+        {
+            "cameras": [
+                {
+                    "id": "third-party",
+                    "mac": "84:78:48:28:72:5C",
+                    "marketName": "Third Party Camera",
+                    "featureFlags": {
+                        "hasMotionZones": True,
+                        "motionAlgorithms": [],
+                    },
+                    "motionZones": [],
+                    "smartDetectSettings": {"objectTypes": [], "audioTypes": []},
+                },
+                {
+                    "id": "native",
+                    "mac": "1C:6A:1B:0E:81:73",
+                    "marketName": "G6 Instant",
+                    "featureFlags": {
+                        "hasMotionZones": True,
+                        "motionAlgorithms": ["enhanced"],
+                    },
+                    "motionZones": [],
+                    "smartDetectSettings": {"objectTypes": [], "audioTypes": []},
+                },
+            ]
+        }
+    )
+
+    third_party = next(
+        camera for camera in catalog["cameras"] if camera["camera_id"] == "third-party"
+    )
+    native = next(camera for camera in catalog["cameras"] if camera["camera_id"] == "native")
+
+    assert third_party["supported_sources"] == []
+    assert native["supported_sources"] == ["motion"]

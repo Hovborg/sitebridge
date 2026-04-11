@@ -115,6 +115,39 @@ def test_runtime_backfill_reports_non_fatal_errors() -> None:
     assert attributes["last_sync_error"] is None
 
 
+def test_runtime_backfill_uses_receive_time_for_invalid_event_timestamp() -> None:
+    runtime = HaProtectBridgeRuntime(SimpleNamespace(), _mock_entry({}))
+    runtime._sensor_specs = {
+        "global:person": BridgeSensorSpec(
+            key="global:person",
+            unique_id="entry-1_global_person",
+            name="Last person",
+            icon=None,
+            source="person",
+        )
+    }
+
+    async def _async_get_events(**kwargs):
+        del kwargs
+        return [
+            {
+                "type": "smartDetectZone",
+                "smartDetectTypes": ["person"],
+                "timestamp": 10**100,
+            }
+        ]
+
+    runtime._api.async_get_events = _async_get_events
+    before = datetime.now(UTC)
+
+    asyncio.run(runtime._async_backfill_recent_events())
+
+    attributes = runtime.get_status_attributes()
+    assert attributes["last_backfill_error"] is None
+    assert attributes["last_backfill_applied_count"] == 1
+    assert runtime.get_sensor_state("global:person") >= before
+
+
 def test_runtime_backfill_paginates_protect_events() -> None:
     runtime = HaProtectBridgeRuntime(
         SimpleNamespace(),
@@ -181,6 +214,9 @@ def test_runtime_status_attributes_do_not_expose_webhook_secret() -> None:
 
     assert "webhook_url" not in attributes
     assert "webhook_path" not in attributes
+    assert "host" not in attributes
+    assert "nvr_id" not in attributes
+    assert "nvr_name" not in attributes
     assert attributes["webhook_configured"] is True
     assert attributes["webhook_url_source"] == "home_assistant_instance_url"
     assert attributes["webhook_base_url_override_configured"] is False
@@ -435,6 +471,62 @@ def test_runtime_sync_continues_when_one_automation_source_is_rejected() -> None
     assert attributes["managed_automation_count"] == 1
     assert attributes["automation_sync_error_count"] == 1
     assert attributes["automation_sync_errors"] == {"face": "unsupported source"}
+
+
+def test_runtime_sync_keeps_existing_automation_when_replacement_fails() -> None:
+    runtime = HaProtectBridgeRuntime(SimpleNamespace(), _mock_entry({}))
+    runtime.catalog = {
+        "nvr_id": "nvr",
+        "nvr_name": "Protect",
+        "lookup": {},
+        "managed_sources": ["person"],
+        "cameras": [
+            {
+                "device_mac": "84784828725C",
+                "supported_sources": ["person"],
+            }
+        ],
+    }
+    runtime._webhook_url = "http://ha.local/api/webhook/new"
+    deleted: list[str] = []
+
+    async def _async_delete_automation(automation_id: str) -> None:
+        deleted.append(automation_id)
+
+    async def _async_create_automation(payload: dict[str, object]) -> dict[str, object]:
+        del payload
+        raise ProtectApiError("duplicate name")
+
+    runtime._api.async_delete_automation = _async_delete_automation
+    runtime._api.async_create_automation = _async_create_automation
+
+    existing = {
+        "id": "existing",
+        "name": "UniFi Protect Bridge: person",
+        "enable": True,
+        "sources": [{"device": "84784828725C"}],
+        "conditions": [{"condition": {"type": "is", "source": "person"}}],
+        "actions": [
+            {
+                "type": "HTTP_REQUEST",
+                "metadata": {
+                    "url": "http://ha.local/api/webhook/old?source=person",
+                    "method": "POST",
+                    "timeout": 30000,
+                    "useThumbnail": True,
+                    "headers": [],
+                },
+            }
+        ],
+    }
+
+    asyncio.run(runtime._async_sync_managed_automations([existing]))
+
+    assert deleted == []
+    assert runtime._managed_automations["person"]["id"] == "existing"
+    assert runtime.get_status_attributes()["automation_sync_errors"] == {
+        "person": "duplicate name"
+    }
 
 
 def _mock_entry(

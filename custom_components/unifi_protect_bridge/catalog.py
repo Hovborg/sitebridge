@@ -31,6 +31,7 @@ _SOURCE_ORDER = {source: index for index, source in enumerate(KNOWN_DETECTION_TY
 
 def build_camera_catalog(bootstrap: Mapping[str, Any] | None) -> dict[str, Any]:
     data = dict(bootstrap or {})
+    nvr = _mapping_or_empty(data.get("nvr"))
     lookup: dict[str, str] = {}
     cameras: list[dict[str, Any]] = []
     managed_sources: set[str] = set()
@@ -44,13 +45,14 @@ def build_camera_catalog(bootstrap: Mapping[str, Any] | None) -> dict[str, Any]:
         camera_key = camera_id or device_mac or f"camera_{index}"
         name = _camera_name(raw_camera, device_mac, index)
         supported_sources = _camera_sources(raw_camera)
+        feature_flags = _mapping_or_empty(raw_camera.get("featureFlags"))
         camera = {
             "camera_id": camera_id,
             "camera_key": camera_key,
             "device_mac": device_mac,
             "name": name,
             "model": _string(raw_camera.get("marketName")) or "UniFi Protect Camera",
-            "is_doorbell": bool((raw_camera.get("featureFlags") or {}).get("isDoorbell")),
+            "is_doorbell": bool(feature_flags.get("isDoorbell")),
             "last_motion_ms": _int_or_none(raw_camera.get("lastMotion")),
             "last_ring_ms": _int_or_none(raw_camera.get("lastRing")),
             "supported_sources": supported_sources,
@@ -65,8 +67,8 @@ def build_camera_catalog(bootstrap: Mapping[str, Any] | None) -> dict[str, Any]:
 
     cameras.sort(key=lambda item: item["name"].casefold())
     return {
-        "nvr_id": _string((data.get("nvr") or {}).get("id")),
-        "nvr_name": _string((data.get("nvr") or {}).get("name")) or "UniFi Protect",
+        "nvr_id": _string(nvr.get("id")),
+        "nvr_name": _string(nvr.get("name")) or "UniFi Protect",
         "cameras": cameras,
         "lookup": lookup,
         "managed_sources": _sort_sources(managed_sources),
@@ -112,8 +114,8 @@ def normalize_device_key(value: Any) -> str | None:
 
 
 def _camera_sources(camera: Mapping[str, Any]) -> list[str]:
-    sources = ["motion"]
-    smart_detect_settings = camera.get("smartDetectSettings") or {}
+    sources = ["motion"] if _motion_detection_enabled(camera) else []
+    smart_detect_settings = _mapping_or_empty(camera.get("smartDetectSettings"))
 
     for object_type in smart_detect_settings.get("objectTypes") or []:
         sources.extend(_object_type_to_sources(object_type))
@@ -127,6 +129,43 @@ def _camera_sources(camera: Mapping[str, Any]) -> list[str]:
             sources.append(normalized)
 
     return _sort_sources(sources)
+
+
+def _motion_detection_enabled(camera: Mapping[str, Any]) -> bool:
+    feature_flags = _mapping_or_empty(camera.get("featureFlags"))
+    for key in (
+        "hasMotion",
+        "hasMotionDetection",
+        "hasMotionZones",
+        "isMotionDetectionSupported",
+    ):
+        if feature_flags.get(key) is False:
+            return False
+
+    motion_algorithms = feature_flags.get("motionAlgorithms")
+    motion_zones = camera.get("motionZones")
+    if (
+        camera.get("lastMotion") is None
+        and isinstance(motion_algorithms, list)
+        and not motion_algorithms
+        and isinstance(motion_zones, list)
+        and not motion_zones
+    ):
+        return False
+
+    for settings_key in (
+        "motionSettings",
+        "motionDetectionSettings",
+        "motionDetection",
+    ):
+        settings = camera.get(settings_key)
+        if not isinstance(settings, Mapping):
+            continue
+        for enabled_key in ("enabled", "isEnabled", "enable"):
+            if settings.get(enabled_key) is False:
+                return False
+
+    return True
 
 
 def _audio_type_to_source(value: Any) -> str | None:
@@ -155,6 +194,10 @@ def _camera_name(camera: Mapping[str, Any], device_mac: str | None, index: int) 
 def _sort_sources(values: Iterable[str]) -> list[str]:
     unique = dict.fromkeys(value for value in values if value in KNOWN_DETECTION_TYPES)
     return sorted(unique, key=lambda value: (_SOURCE_ORDER.get(value, 999), value))
+
+
+def _mapping_or_empty(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
 
 
 def _string(value: Any) -> str | None:

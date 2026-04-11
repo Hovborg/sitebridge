@@ -12,6 +12,11 @@ from .entry_runtime import iter_entry_runtimes
 from .normalize import normalize_webhook_payload
 
 _LOGGER = logging.getLogger(__name__)
+MAX_WEBHOOK_BODY_BYTES = 256 * 1024
+
+
+class WebhookPayloadTooLarge(ValueError):
+    """Webhook request body exceeded the integration limit."""
 
 
 async def async_handle_protect_webhook(hass: Any, webhook_id: str, request: Request) -> Response:
@@ -21,7 +26,13 @@ async def async_handle_protect_webhook(hass: Any, webhook_id: str, request: Requ
             status=HTTPStatus.METHOD_NOT_ALLOWED,
         )
 
-    payload = await _read_payload(request)
+    try:
+        payload = await _read_payload(request)
+    except WebhookPayloadTooLarge:
+        return json_response(
+            {"status": HTTPStatus.REQUEST_ENTITY_TOO_LARGE},
+            status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+        )
     normalized = normalize_webhook_payload(payload, request.query)
     runtime = _runtime_for_webhook(hass, webhook_id)
     matched_cameras = []
@@ -56,7 +67,13 @@ async def _read_payload(request: Request) -> dict[str, Any]:
     if request.method not in {"POST", "PUT"}:
         return {}
 
+    content_length = _content_length(request)
+    if content_length is not None and content_length > MAX_WEBHOOK_BODY_BYTES:
+        raise WebhookPayloadTooLarge
+
     body = await request.text()
+    if len(body.encode("utf-8")) > MAX_WEBHOOK_BODY_BYTES:
+        raise WebhookPayloadTooLarge
     if not body.strip():
         return {}
 
@@ -70,6 +87,14 @@ async def _read_payload(request: Request) -> dict[str, Any]:
         return loaded if isinstance(loaded, dict) else {"raw_body": loaded}
 
     return {"raw_body": body}
+
+
+def _content_length(request: Request) -> int | None:
+    try:
+        value = getattr(request, "content_length", None)
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _runtime_for_webhook(hass: Any, webhook_id: str) -> Any | None:

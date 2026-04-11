@@ -5,6 +5,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.core import callback
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -16,7 +17,9 @@ from .runtime import BridgeSensorSpec, HaProtectBridgeRuntime
 
 async def async_setup_entry(hass: Any, entry: Any, async_add_entities: Any) -> None:
     del hass
-    runtime: HaProtectBridgeRuntime = get_entry_runtime(entry)
+    runtime = get_entry_runtime(entry)
+    if runtime is None:
+        raise ConfigEntryNotReady("UniFi Protect Bridge runtime is not ready")
     known_sensor_keys: set[str] = set()
     entities = [HaProtectBridgeStatusSensor(runtime)]
     entities.extend(_build_new_timestamp_entities(runtime, known_sensor_keys))

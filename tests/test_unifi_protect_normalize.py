@@ -164,6 +164,46 @@ def test_normalize_smart_detect_event_payload() -> None:
     assert normalized["timestamp_ms"] == 1763816532675
 
 
+def test_normalize_smart_detect_event_type_is_case_and_separator_tolerant() -> None:
+    normalized = normalize_event_payload(
+        {
+            "type": "smart_detect_zone",
+            "camera": "586ab7c2bb6423c3fdd47e95",
+            "smartDetectTypes": ["person"],
+            "timestamp": 1763816532675,
+        }
+    )
+
+    assert normalized["detection_types"] == ["person"]
+
+
+def test_normalize_preserves_zero_timestamp_over_fallbacks() -> None:
+    normalized = normalize_event_payload(
+        {
+            "type": "ring",
+            "camera": "1c9a2db4df6efda47a3509be",
+            "timestamp": 0,
+            "start": 1642971766763,
+        }
+    )
+
+    assert normalized["timestamp_ms"] == 0
+    assert normalized["timestamp_iso"] == "1970-01-01T00:00:00+00:00"
+
+
+def test_normalize_ignores_out_of_range_timestamp() -> None:
+    normalized = normalize_event_payload(
+        {
+            "type": "ring",
+            "camera": "1c9a2db4df6efda47a3509be",
+            "timestamp": 10**100,
+        }
+    )
+
+    assert normalized["timestamp_ms"] == 10**100
+    assert normalized["timestamp_iso"] is None
+
+
 def test_normalize_ring_event_uses_start_when_timestamp_missing() -> None:
     normalized = normalize_event_payload(
         {

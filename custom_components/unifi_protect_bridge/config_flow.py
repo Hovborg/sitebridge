@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import secrets
 from collections.abc import Mapping
 from typing import Any
@@ -24,6 +25,8 @@ from .const import (
     MAX_EVENT_BACKFILL_LIMIT,
 )
 from .protect_api import ProtectApiClient, ProtectApiError, ProtectAuthError
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class HaProtectBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -72,6 +75,7 @@ class HaProtectBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except ProtectApiError:
                 errors["base"] = "cannot_connect"
             except Exception:
+                _LOGGER.exception("Unexpected error while validating Protect connection")
                 errors["base"] = "unknown"
             else:
                 unique_id = info.get("nvr_id") or cleaned[CONF_HOST]
@@ -114,6 +118,7 @@ class HaProtectBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except ProtectApiError:
                 errors["base"] = "cannot_connect"
             except Exception:
+                _LOGGER.exception("Unexpected error while validating Protect connection")
                 errors["base"] = "unknown"
             else:
                 unique_id = info.get("nvr_id") or updated_data[CONF_HOST]

@@ -51,32 +51,41 @@ class ProtectApiClient:
         await self._async_ensure_session()
         assert self._session is not None
 
-        async with self._session.post(
-            f"{self._base_url}/api/auth/login",
-            json={
-                "username": self._username,
-                "password": self._password,
-            },
-        ) as response:
-            if response.status in {401, 403}:
-                raise ProtectAuthError(f"Protect authentication failed with {response.status}")
-            if response.status >= 400:
-                text = await response.text()
-                raise ProtectApiError(
-                    f"Protect login failed: {response.status} {text[:200]}"
-                )
-            self._csrf_token = response.headers.get("X-Csrf-Token")
-            await response.text()
+        try:
+            async with self._session.post(
+                f"{self._base_url}/api/auth/login",
+                json={
+                    "username": self._username,
+                    "password": self._password,
+                },
+            ) as response:
+                if response.status in {401, 403}:
+                    raise ProtectAuthError(
+                        f"Protect authentication failed with {response.status}"
+                    )
+                if response.status >= 400:
+                    text = await response.text()
+                    raise ProtectApiError(
+                        f"Protect login failed: {response.status} {text[:200]}"
+                    )
+                self._csrf_token = response.headers.get("X-Csrf-Token")
+                await response.text()
+        except ProtectApiError:
+            raise
+        except (aiohttp.ClientError, TimeoutError, OSError) as err:
+            raise ProtectApiError(f"Could not connect to Protect: {err}") from err
 
     async def async_get_bootstrap(self) -> dict[str, Any]:
         response = await self._async_request("GET", "/proxy/protect/api/bootstrap")
-        return response if isinstance(response, dict) else {}
+        if not isinstance(response, dict):
+            raise ProtectApiError("Protect API returned an invalid bootstrap response")
+        return response
 
     async def async_get_automations(self) -> list[dict[str, Any]]:
         response = await self._async_request("GET", "/proxy/protect/api/automations")
         if isinstance(response, list):
             return [item for item in response if isinstance(item, dict)]
-        return []
+        raise ProtectApiError("Protect API returned an invalid automations response")
 
     async def async_get_events(
         self,
@@ -103,7 +112,7 @@ class ProtectApiClient:
         )
         if isinstance(response, list):
             return [item for item in response if isinstance(item, dict)]
-        return []
+        raise ProtectApiError("Protect API returned an invalid events response")
 
     async def async_create_automation(self, payload: dict[str, Any]) -> dict[str, Any]:
         response = await self._async_request(
@@ -131,44 +140,49 @@ class ProtectApiClient:
         if method.upper() not in {"GET", "HEAD", "OPTIONS"} and self._csrf_token:
             headers["X-Csrf-Token"] = self._csrf_token
 
-        async with self._session.request(
-            method,
-            f"{self._base_url}{path}",
-            json=payload,
-            params=params,
-            headers=headers,
-        ) as response:
-            if response.status in {401, 403}:
-                if allow_reauth:
-                    await self.async_login()
-                    return await self._async_request(
-                        method,
-                        path,
-                        payload=payload,
-                        params=params,
-                        allow_reauth=False,
+        try:
+            async with self._session.request(
+                method,
+                f"{self._base_url}{path}",
+                json=payload,
+                params=params,
+                headers=headers,
+            ) as response:
+                if response.status in {401, 403}:
+                    if allow_reauth:
+                        await self.async_login()
+                        return await self._async_request(
+                            method,
+                            path,
+                            payload=payload,
+                            params=params,
+                            allow_reauth=False,
+                        )
+                    raise ProtectAuthError(f"Protect authentication failed with {response.status}")
+
+                if response.status >= 400:
+                    text = await response.text()
+                    raise ProtectApiError(
+                        f"Protect API request failed: {response.status} {text[:200]}"
                     )
-                raise ProtectAuthError(f"Protect authentication failed with {response.status}")
 
-            if response.status >= 400:
+                if response.status == 204:
+                    return None
+
                 text = await response.text()
-                raise ProtectApiError(
-                    f"Protect API request failed: {response.status} {text[:200]}"
-                )
+                if not text.strip():
+                    return None
 
-            if response.status == 204:
-                return None
-
-            text = await response.text()
-            if not text.strip():
-                return None
-
-            try:
-                return json.loads(text)
-            except json.JSONDecodeError as err:
-                raise ProtectApiError(
-                    f"Protect API returned invalid JSON for {path}"
-                ) from err
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError as err:
+                    raise ProtectApiError(
+                        f"Protect API returned invalid JSON for {path}"
+                    ) from err
+        except ProtectApiError:
+            raise
+        except (aiohttp.ClientError, TimeoutError, OSError) as err:
+            raise ProtectApiError(f"Protect API request failed for {path}: {err}") from err
 
     async def _async_ensure_session(self) -> None:
         if self._session is not None:
@@ -192,4 +206,8 @@ def _normalize_base_url(host: str) -> str:
     parsed = urlsplit(text)
     if not parsed.scheme or not parsed.netloc:
         raise ProtectApiError(f"Invalid Protect host: {host}")
+    if parsed.scheme not in {"http", "https"}:
+        raise ProtectApiError("Protect host must use http or https")
+    if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
+        raise ProtectApiError("Protect host must be only a host or origin")
     return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")

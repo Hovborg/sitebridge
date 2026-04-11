@@ -1,3 +1,5 @@
+import pytest
+
 from custom_components.unifi_protect_bridge.automation_payloads import (
     automation_needs_replace,
     build_managed_automation_name,
@@ -14,6 +16,14 @@ def test_build_webhook_target_url_preserves_existing_query() -> None:
 
     assert "foo=bar" in url
     assert "source=person" in url
+
+
+def test_build_webhook_target_url_rejects_invalid_urls() -> None:
+    with pytest.raises(ValueError, match="absolute http"):
+        build_webhook_target_url("", "person")
+
+    with pytest.raises(ValueError, match="fragment"):
+        build_webhook_target_url("http://ha.local/api/webhook/test#fragment", "person")
 
 
 def test_build_managed_automation_payload_has_expected_shape() -> None:

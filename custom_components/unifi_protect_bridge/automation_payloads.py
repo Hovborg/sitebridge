@@ -61,6 +61,10 @@ def build_managed_automation_payload(
 
 def build_webhook_target_url(webhook_url: str, source: str) -> str:
     parsed = urlsplit(webhook_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not parsed.path:
+        raise ValueError("webhook_url must be an absolute http(s) URL with a path")
+    if parsed.fragment:
+        raise ValueError("webhook_url must not include a fragment")
     query = dict(parse_qsl(parsed.query, keep_blank_values=True))
     query["source"] = source
     return urlunsplit(

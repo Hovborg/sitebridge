@@ -24,11 +24,13 @@ class _FakeRequest:
         body: str = "",
         headers: dict[str, str] | None = None,
         query: dict[str, str] | None = None,
+        content_length: int | None = None,
     ) -> None:
         self.method = method
         self._body = body
         self.headers = headers or {}
         self.query = query or {}
+        self.content_length = content_length if content_length is not None else len(body.encode())
 
     async def text(self) -> str:
         return self._body
@@ -114,6 +116,30 @@ def test_read_payload_wraps_text_body() -> None:
     )
 
     assert payload == {"raw_body": "person detected"}
+
+
+def test_handle_webhook_rejects_oversized_body_before_event_processing() -> None:
+    runtime = _FakeRuntime()
+    hass = SimpleNamespace(
+        bus=_FakeBus(),
+        config_entries=_FakeConfigEntries([SimpleNamespace(runtime_data=runtime)]),
+    )
+
+    response = asyncio.run(
+        async_handle_protect_webhook(
+            hass,
+            "webhook-1",
+            _FakeRequest(
+                body="{}",
+                headers={"Content-Type": "application/json"},
+                content_length=300 * 1024,
+            ),
+        )
+    )
+
+    assert response.status == 413
+    assert hass.bus.events == []
+    assert runtime.normalized is None
 
 
 def test_handle_webhook_rejects_get_before_event_processing() -> None:

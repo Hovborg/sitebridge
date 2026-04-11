@@ -203,7 +203,6 @@ class HaProtectBridgeRuntime:
         if webhook_url_source is None and self.entry.data.get(CONF_WEBHOOK_BASE_URL):
             webhook_url_source = "override"
         return {
-            "host": self.entry.data[CONF_HOST],
             "verify_ssl": self.entry.data[CONF_VERIFY_SSL],
             "event_backfill_limit": self._event_backfill_limit(),
             "last_backfill_event_count": self._last_backfill_event_count,
@@ -217,8 +216,6 @@ class HaProtectBridgeRuntime:
             "webhook_base_url_override_configured": bool(
                 self.entry.data.get(CONF_WEBHOOK_BASE_URL)
             ),
-            "nvr_id": self.catalog.get("nvr_id"),
-            "nvr_name": self.catalog.get("nvr_name"),
             "camera_count": len(self.catalog.get("cameras") or []),
             "managed_sources": self.managed_sources,
             "managed_automation_count": self.managed_automation_count,
@@ -322,16 +319,22 @@ class HaProtectBridgeRuntime:
             existing = existing_candidates[0] if existing_candidates else None
             duplicates = existing_candidates[1:]
             if existing and not automation_needs_replace(existing, desired):
-                await self._async_delete_duplicate_automations(source, duplicates)
+                try:
+                    await self._async_delete_duplicate_automations(source, duplicates)
+                except ProtectApiError as err:
+                    automation_sync_errors[source] = (
+                        f"Could not remove duplicate automation(s): {err}"
+                    )
+                    _LOGGER.warning(
+                        "Could not remove duplicate managed Protect automation for %s: %s",
+                        source,
+                        err,
+                    )
                 managed[source] = dict(existing)
                 continue
 
-            deleted_existing = await self._async_delete_automations(
-                source,
-                existing_candidates,
-            )
-            if deleted_existing:
-                _LOGGER.info("Replaced managed Protect automation for %s", source)
+            if existing_candidates:
+                _LOGGER.info("Replacing managed Protect automation for %s", source)
             else:
                 _LOGGER.info("Creating managed Protect automation for %s", source)
 
@@ -344,11 +347,41 @@ class HaProtectBridgeRuntime:
                     source,
                     err,
                 )
+                if existing:
+                    managed[source] = dict(existing)
                 continue
+
+            if existing_candidates:
+                try:
+                    await self._async_delete_automations(source, existing_candidates)
+                except ProtectApiError as err:
+                    automation_sync_errors[source] = (
+                        f"Created replacement but could not remove old automation(s): {err}"
+                    )
+                    _LOGGER.warning(
+                        "Created replacement for %s but could not remove old automation(s): %s",
+                        source,
+                        err,
+                    )
+                else:
+                    _LOGGER.info("Replaced managed Protect automation for %s", source)
+
             managed[source] = created or desired
 
         for source, stale_items in existing_by_source.items():
-            if await self._async_delete_automations(source, stale_items):
+            try:
+                deleted_stale = await self._async_delete_automations(source, stale_items)
+            except ProtectApiError as err:
+                automation_sync_errors[source] = (
+                    f"Could not remove stale automation(s): {err}"
+                )
+                _LOGGER.warning(
+                    "Could not remove stale managed Protect automation for %s: %s",
+                    source,
+                    err,
+                )
+                continue
+            if deleted_stale:
                 _LOGGER.info("Removed stale managed Protect automation for %s", source)
 
         self._managed_automations = managed
@@ -376,6 +409,11 @@ class HaProtectBridgeRuntime:
         return deleted
 
     def _desired_automations(self) -> dict[str, dict[str, Any]]:
+        webhook_url = self.webhook_url
+        if not webhook_url:
+            raise ProtectApiError(
+                "Could not determine a full Home Assistant webhook URL. Set webhook_base_url."
+            )
         desired: dict[str, dict[str, Any]] = {}
         for source in self.managed_sources:
             device_macs = [
@@ -385,11 +423,14 @@ class HaProtectBridgeRuntime:
             ]
             if not device_macs:
                 continue
-            desired[source] = build_managed_automation_payload(
-                source,
-                device_macs,
-                self.webhook_url or "",
-            )
+            try:
+                desired[source] = build_managed_automation_payload(
+                    source,
+                    device_macs,
+                    webhook_url,
+                )
+            except ValueError as err:
+                raise ProtectApiError(f"Invalid managed automation payload: {err}") from err
         return desired
 
     def _rebuild_sensor_specs(self) -> None:
@@ -506,7 +547,7 @@ class HaProtectBridgeRuntime:
         for camera in self.catalog.get("cameras") or []:
             for source, key in (("motion", "last_motion_ms"), ("ring", "last_ring_ms")):
                 timestamp_ms = camera.get(key)
-                if not timestamp_ms:
+                if timestamp_ms is None:
                     continue
                 device_id = (
                     camera.get("camera_id")
@@ -597,8 +638,11 @@ class HaProtectBridgeRuntime:
 
 def _timestamp_from_normalized(normalized: dict[str, Any]) -> datetime:
     timestamp_ms = normalized.get("timestamp_ms")
-    if timestamp_ms:
-        return datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
+    if timestamp_ms is not None and timestamp_ms != "":
+        try:
+            return datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
+        except (TypeError, ValueError, OSError, OverflowError):
+            _LOGGER.debug("Ignoring invalid Protect event timestamp: %r", timestamp_ms)
     return datetime.now(UTC)
 
 

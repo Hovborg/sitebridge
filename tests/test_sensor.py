@@ -4,7 +4,9 @@ import asyncio
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
+import pytest
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.unifi_protect_bridge.runtime import BridgeSensorSpec
@@ -108,6 +110,13 @@ def test_async_setup_entry_adds_new_timestamp_entities_on_runtime_update() -> No
     runtime.emit_update()
 
     assert add_calls[-1] == ["entry-1_camera-1_person"]
+
+
+def test_async_setup_entry_raises_when_runtime_is_missing() -> None:
+    entry = FakeEntry("entry-1", None)
+
+    with pytest.raises(ConfigEntryNotReady, match="runtime is not ready"):
+        asyncio.run(async_setup_entry(SimpleNamespace(), entry, lambda _entities: None))
 
 
 def test_timestamp_sensor_restore_mixin_precedes_sensor_entity() -> None:

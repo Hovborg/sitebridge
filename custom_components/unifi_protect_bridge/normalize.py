@@ -112,7 +112,7 @@ def normalize_webhook_payload(
     source_values = _extract_source_values(alarm, query)
     detection_types = _extract_detection_types(alarm_name, source_values)
     device_ids = _extract_device_ids(alarm, query)
-    timestamp_ms = _coerce_int(payload.get("timestamp") or query.get("timestamp"))
+    timestamp_ms = _coerce_int(_first_present(payload.get("timestamp"), query.get("timestamp")))
 
     return {
         "alarm_name": alarm_name,
@@ -147,7 +147,7 @@ def normalize_event_payload(payload: Mapping[str, Any] | None) -> dict[str, Any]
         ]
     )
     timestamp_ms = _coerce_int(
-        payload.get("timestamp") or payload.get("start") or payload.get("end")
+        _first_present(payload.get("timestamp"), payload.get("start"), payload.get("end"))
     )
 
     return {
@@ -216,9 +216,13 @@ def _extract_event_detection_types(
     detections: list[str] = []
 
     if event_type:
-        detections.extend(_EVENT_TYPE_TO_DETECTIONS.get(event_type, ()))
+        event_slug = _slugify(event_type)
+        event_key = event_slug.replace("_", "")
+        detections.extend(_EVENT_TYPE_TO_DETECTIONS.get(event_slug, ()))
+    else:
+        event_key = ""
 
-    if event_type in {"smartDetectZone", "smartDetectLine", "smartAudioDetect"}:
+    if event_key in {"smartdetectzone", "smartdetectline", "smartaudiodetect"}:
         for raw in smart_detect_types:
             detections.extend(_SMART_EVENT_TYPE_TO_DETECTIONS.get(_slugify(raw), ()))
 
@@ -331,7 +335,10 @@ def _coerce_int(value: Any) -> int | None:
 def _timestamp_to_iso(timestamp_ms: int | None) -> str | None:
     if timestamp_ms is None:
         return None
-    return datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC).isoformat()
+    try:
+        return datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC).isoformat()
+    except (OSError, OverflowError, ValueError):
+        return None
 
 
 def _string_or_none(value: Any) -> str | None:
@@ -344,5 +351,12 @@ def _string_or_none(value: Any) -> str | None:
 def _first_non_empty(*values: str | None) -> str | None:
     for value in values:
         if value:
+            return value
+    return None
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None and value != "":
             return value
     return None
