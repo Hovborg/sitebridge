@@ -40,6 +40,7 @@
 <p align="center">
   <a href="#why-this-project">Why</a> •
   <a href="#how-it-works">How It Works</a> •
+  <a href="#project-split">Project Split</a> •
   <a href="#install-with-hacs">Install</a> •
   <a href="#configure-it">Configure</a> •
   <a href="#supported-detections">Detections</a> •
@@ -49,6 +50,18 @@
 
 > [!TIP]
 > If you want the shortest path, click **Open in HACS**, install the integration, restart Home Assistant, and add **UniFi Protect Bridge** from **Settings -> Devices & services**.
+> No CLI install is required for HACS.
+
+## At A Glance
+
+| Item | Value |
+| --- | --- |
+| Home Assistant domain | `unifi_protect_bridge` |
+| HACS repository | `https://github.com/Hovborg/unifi-protect-bridge` |
+| Manual install path | `config/custom_components/unifi_protect_bridge/` |
+| Minimum Home Assistant version | `2026.3.0` |
+| Runtime model | local UniFi Protect login, managed Protect webhooks, local push into Home Assistant |
+| CLI requirement | none; the CLI is optional and installed from a separate repository |
 
 ## Why This Project
 
@@ -85,11 +98,28 @@ After setup, the integration will:
 - register a webhook endpoint in Home Assistant
 - normalize incoming payloads into sensors and events
 
+It only manages bridge-owned Protect automations. Current automations owned by
+you stay outside the bridge unless they use the managed prefix from this project.
+
+## Project Split
+
+This repository is the Home Assistant custom integration. It is the only
+repository you need for HACS installs.
+
+| Repository | Purpose | Required for HACS |
+| --- | --- | --- |
+| [`Hovborg/unifi-protect-bridge`](https://github.com/Hovborg/unifi-protect-bridge) | Home Assistant custom integration, config flow, sensors, events, services, diagnostics, and Protect webhook provisioning | yes |
+| [`Hovborg/unifi-protect-bridge-cli`](https://github.com/Hovborg/unifi-protect-bridge-cli) | Optional terminal helper for login checks, camera/automation inspection, diff/apply, and HA resync | no |
+
+Home Assistant does not shell out to the CLI. The integration logs in to UniFi
+Protect from the Home Assistant config entry and provisions bridge-owned Protect
+webhook automations itself.
+
 ## Install With HACS
 
 1. Open **HACS** in Home Assistant.
 2. Open the top-right menu and select **Custom repositories**.
-3. Add `https://github.com/Hovborg/unifi-protect-bridge`.
+3. Add integration repository URL `https://github.com/Hovborg/unifi-protect-bridge`.
 4. Choose category **Integration**.
 5. Open **UniFi Protect Bridge** in HACS and click **Download**.
 6. Restart Home Assistant.
@@ -129,6 +159,9 @@ When you add the integration, Home Assistant asks for:
 - `Verify SSL certificate`
 - `Webhook base URL override` if Protect cannot reach Home Assistant's normal URL
 
+Use a dedicated local UniFi OS / Protect user for the integration. Avoid owner,
+UI.com SSO, and MFA accounts for automated local integrations.
+
 Once connected, Home Assistant will manage the Protect side for you.
 
 You can later use:
@@ -152,6 +185,8 @@ If you need a stable low-load setup, start with `0` and increase later only if y
 - one managed webhook automation per supported detection source
 - automatic refresh when camera capabilities change
 - consistent bridge-owned automation naming
+- legacy `HA Protect Bridge:` automations are recognized so renamed installs do
+  not create duplicate bridge rules
 
 ### In Home Assistant
 
@@ -198,7 +233,8 @@ Every incoming webhook fires `unifi_protect_bridge_webhook`. Recognized detectio
 
 ## Supported Detections
 
-The current automatic coverage focuses on the normal Protect 7.x detection families.
+The current automatic coverage focuses on Protect detection families exposed by
+the local Protect API and normalized by this integration.
 
 | Group | Detection types |
 | --- | --- |
@@ -262,6 +298,10 @@ Then restart Home Assistant and add the integration from **Settings -> Devices &
 >
 > That private API is what makes zero-manual setup possible, but it also means future Protect updates may require compatibility fixes in this integration.
 
+The integration only manages Protect automations that use the bridge-owned
+prefix `UniFi Protect Bridge:` or the legacy prefix `HA Protect Bridge:`. It
+does not take ownership of user-created Protect automations.
+
 ## Optional CLI
 
 The CLI has moved to its own repository:
@@ -274,6 +314,14 @@ bridge-owned Protect webhook automations itself.
 
 Use the separate CLI only for terminal-based diagnostics, Protect login checks,
 diff/apply support, and calling the integration resync service manually.
+
+Current CLI quick start:
+
+```bash
+pipx install "git+https://github.com/Hovborg/unifi-protect-bridge-cli.git@v0.1.5"
+upb login --save-password
+upb cameras
+```
 
 See [`docs/project-split.md`](docs/project-split.md) for the repository split
 and shared contract.

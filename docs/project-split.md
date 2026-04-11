@@ -22,6 +22,12 @@ Install path:
 config/custom_components/unifi_protect_bridge/
 ```
 
+Install method:
+
+- HACS custom repository: `https://github.com/Hovborg/unifi-protect-bridge`
+- Category: **Integration**
+- Home Assistant config flow: **Settings -> Devices & services -> Add Integration -> UniFi Protect Bridge**
+
 The CLI is not required for HACS installs. Home Assistant runs this integration
 directly and manages UniFi Protect from the config entry.
 
@@ -41,6 +47,31 @@ Purpose:
 
 The CLI is installed separately with Python tooling and is used manually by an
 admin or developer. It is not run by Home Assistant.
+
+Current global CLI install:
+
+```bash
+pipx install "git+https://github.com/Hovborg/unifi-protect-bridge-cli.git@v0.1.5"
+```
+
+Installed command names:
+
+- `upb`
+- `unifi-bridge`
+- `unifi-protect-bridge`
+- `unifi-protect-bridge-cli`
+
+`upb` is the recommended short command.
+
+Typical CLI login flow:
+
+```bash
+upb login --save-password
+upb cameras
+upb automations
+upb diff
+upb apply
+```
 
 ## Shared Contract
 
