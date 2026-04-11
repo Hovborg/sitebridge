@@ -62,6 +62,7 @@
 | Minimum Home Assistant version | `2026.3.0` |
 | Runtime model | local UniFi Protect login, managed Protect webhooks, local push into Home Assistant |
 | CLI requirement | none; the CLI is optional and installed from a separate repository |
+| Brand assets | shipped locally in `custom_components/unifi_protect_bridge/brand/` |
 
 ## Why This Project
 
@@ -197,6 +198,7 @@ If you need a stable low-load setup, start with `0` and increase later only if y
 - one per-camera timestamp sensor for every supported source that camera exposes
 - typed HA events for every incoming detection
 - services for inspection and resync
+- local icon and logo assets for Home Assistant 2026.3+
 
 Timestamp sensors show the last known detection time. On a fresh install, a
 sensor can be `unknown` until startup backfill or the first live Protect webhook

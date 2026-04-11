@@ -15,6 +15,7 @@ Purpose:
 - Home Assistant runtime
 - Protect webhook provisioning from inside Home Assistant
 - sensors, events, diagnostics, services, and optional blueprint examples
+- local Home Assistant brand icon/logo assets
 
 Install path:
 
