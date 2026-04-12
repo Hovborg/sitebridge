@@ -344,10 +344,18 @@ unifi_protect_bridge
 ```
 
 New custom integration brand PRs are no longer accepted in
-`home-assistant/brands`; local `brand/` assets are the supported path. If HACS
-or Home Assistant still shows a placeholder after installing a new release,
+`home-assistant/brands`; local `brand/` assets are the supported path. If Home
+Assistant itself still shows a placeholder after installing a new release,
 restart Home Assistant and hard-refresh the browser so the local brand cache is
 rebuilt.
+
+HACS `2.0.5` can still show a placeholder in its own repository/update views
+because HACS has not fully switched those views to Home Assistant's local Brands
+Proxy API yet. The local integration icon is still installed correctly. Upstream
+tracking:
+
+- <https://github.com/hacs/integration/issues/5179>
+- <https://github.com/hacs/frontend/pull/929>
 
 Home Assistant announcement:
 <https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api/>
