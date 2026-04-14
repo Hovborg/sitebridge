@@ -188,6 +188,8 @@ The bridge status sensor exposes operational counters such as:
 - `sensor_count`
 - `known_sensor_count`
 - `unknown_sensor_count`
+- `known_sensor_counts_by_source`
+- `unknown_sensor_counts_by_source`
 - `last_backfill_event_count`
 - `last_backfill_error`
 - `webhook_count`
@@ -382,8 +384,15 @@ Check the bridge status sensor:
 - `last_backfill_error` tells you whether recent event backfill failed.
 - `automation_sync_error_count` tells you whether Protect rejected any managed
   rule.
+- `unknown_sensor_counts_by_source` shows which event sources still have no
+  timestamp.
 
-Some sources can remain `unknown` until that detection actually happens.
+Some sources can remain `unknown` until that detection actually happens. This is
+normal for rare or optional detections such as package events and audio alarms
+like baby cry, burglar, carbon monoxide, glass break, and smoke. A timestamp
+sensor can be `unknown` while the bridge itself is healthy. Treat it as a
+missing event history, not an unavailable entity, when the bridge status sensor
+is `ready` and `last_sync_error` is empty.
 
 ### Startup feels heavy
 
