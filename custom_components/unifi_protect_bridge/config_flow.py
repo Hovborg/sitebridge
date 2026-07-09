@@ -158,7 +158,7 @@ def _build_full_schema(
             vol.Optional(
                 CONF_WEBHOOK_BASE_URL,
                 default=defaults.get(CONF_WEBHOOK_BASE_URL, ""),
-            ): _validate_webhook_base_url,
+            ): str,
         }
     )
 
@@ -193,12 +193,15 @@ def _clean_user_input(
     elif existing_data is not None and CONF_PASSWORD in existing_data:
         cleaned[CONF_PASSWORD] = str(existing_data[CONF_PASSWORD])
 
+    # Safe URL validation (HA‑compatible)
     if CONF_WEBHOOK_BASE_URL in cleaned:
-        webhook_base_url = str(cleaned.get(CONF_WEBHOOK_BASE_URL, "")).strip()
+        webhook_base_url = cleaned.get(CONF_WEBHOOK_BASE_URL)
         if webhook_base_url:
-            cleaned[CONF_WEBHOOK_BASE_URL] = webhook_base_url.rstrip("/")
-        else:
-            cleaned.pop(CONF_WEBHOOK_BASE_URL, None)
+            try:
+                cv.url(webhook_base_url)
+            except vol.Invalid:
+                raise vol.Invalid("webhook_base_url")
+
 
     if CONF_VERIFY_SSL in cleaned or existing_data is None:
         cleaned[CONF_VERIFY_SSL] = bool(
@@ -309,23 +312,6 @@ def _clean_backfill_limit(value: Any) -> int:
     except (TypeError, ValueError):
         return DEFAULT_EVENT_BACKFILL_LIMIT
     return max(0, min(limit, MAX_EVENT_BACKFILL_LIMIT))
-
-
-def _validate_webhook_base_url(value: Any) -> str:
-    text = str(value or "").strip()
-    if not text:
-        return ""
-
-    parsed = urlsplit(text)
-    if (
-        parsed.scheme not in {"http", "https"}
-        or not parsed.netloc
-        or parsed.path not in {"", "/"}
-        or parsed.query
-        or parsed.fragment
-    ):
-        raise vol.Invalid("webhook_base_url")
-    return f"{parsed.scheme}://{parsed.netloc}"
 
 
 async def _async_validate_input(user_input: dict[str, Any]) -> dict[str, str | None]:
