@@ -1,10 +1,10 @@
-# Config-flow URL serialization fix
+# v0.2.22 config-flow compatibility release
 
 ## Goal
 
-Restore the UniFi Protect Bridge config form on Home Assistant 2026.7 while
-preserving the integration's existing webhook base URL normalization and
-origin-only validation.
+Restore the UniFi Protect Bridge config form on Home Assistant 2026.7 and ship
+a release-safe public compatibility package that preserves URL safety, removes
+diagnostic leaks, and prevents the same compatibility gap from escaping CI.
 
 ## Root cause
 
@@ -36,7 +36,28 @@ Valid values retain the current behavior:
 - a blank override is omitted from new entries and clears an existing override
   during reconfiguration.
 
-No runtime, webhook, Protect automation, credential, or CLI behavior changes.
+The Protect host uses the same origin rules, while continuing to add `https://`
+when the user enters a bare host. No webhook event, Protect automation,
+credential-storage, sensor, or CLI behavior changes.
+
+## Diagnostics privacy
+
+Diagnostics will continue exposing useful counts, source names, models, and
+state summaries. The config-entry title and detailed runtime/backfill/automation
+error strings will be redacted because they can embed the configured Protect
+host, username, URL, or NVR name. Error counts and non-sensitive status fields
+remain available.
+
+## CI and development dependencies
+
+CI will retain the fast stub-based unit suite and add real Home Assistant smoke
+jobs for the declared minimum release and the newest installable release. The
+smoke job will serialize the complete config schema as Home Assistant does and
+check the Home Assistant APIs used by the integration.
+
+The development dependency floor moves to pytest 9.0.3 to remove
+`PYSEC-2026-1845`. `voluptuous-serialize` becomes an explicit development
+dependency so the regression test runs before Home Assistant is installed.
 
 ## Tests
 
@@ -58,5 +79,11 @@ by the repository's lightweight unit-test stubs.
 
 Implement the fix on `fix/config-flow-url-serialization`. Do not merge PR #2 as
 written because it weakens existing validation and can raise another exception
-for a non-empty override. After local verification, review the diff and ask for
-explicit approval before pushing, merging, commenting, or closing GitHub items.
+for a non-empty override. Align the package and integration metadata at version
+`0.2.22` and prepare release notes. After local verification, review the diff
+and ask for explicit approval before pushing, merging, releasing, commenting,
+or closing GitHub items.
+
+Shared Home Assistant sessions, resync concurrency changes, selector migration,
+95%+ total coverage, Dependabot, action pinning, and GitHub security-setting
+changes are intentionally deferred to a separate hardening release.
