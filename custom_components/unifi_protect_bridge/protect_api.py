@@ -3,11 +3,11 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from typing import Any
-from urllib.parse import urlsplit
 
 import aiohttp
 
 from .const import DEFAULT_TIMEOUT_SECONDS
+from .origin import InvalidOrigin, normalize_http_origin
 
 PROTECT_EVENTS_REQUEST_LIMIT = 100
 
@@ -200,14 +200,7 @@ class ProtectApiClient:
 
 
 def _normalize_base_url(host: str) -> str:
-    text = host.strip()
-    if "://" not in text:
-        text = f"https://{text}"
-    parsed = urlsplit(text)
-    if not parsed.scheme or not parsed.netloc:
-        raise ProtectApiError(f"Invalid Protect host: {host}")
-    if parsed.scheme not in {"http", "https"}:
-        raise ProtectApiError("Protect host must use http or https")
-    if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
-        raise ProtectApiError("Protect host must be only a host or origin")
-    return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+    try:
+        return normalize_http_origin(host, default_scheme="https")
+    except InvalidOrigin as err:
+        raise ProtectApiError(f"Invalid Protect host: {err}") from err

@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from homeassistant import config_entries
+from voluptuous_serialize import convert
 
 from custom_components.unifi_protect_bridge import config_flow
 from custom_components.unifi_protect_bridge.config_flow import HaProtectBridgeConfigFlow
@@ -17,6 +18,18 @@ from custom_components.unifi_protect_bridge.const import (
     CONF_WEBHOOK_BASE_URL,
     CONF_WEBHOOK_ID,
 )
+
+
+def test_full_schema_is_serializable_for_home_assistant() -> None:
+    serialized = convert(config_flow._build_full_schema({}, require_password=True))
+
+    assert {field["name"] for field in serialized} == {
+        CONF_HOST,
+        CONF_USERNAME,
+        CONF_PASSWORD,
+        CONF_VERIFY_SSL,
+        CONF_WEBHOOK_BASE_URL,
+    }
 
 
 def test_user_flow_creates_entry(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -53,6 +66,32 @@ def test_user_flow_creates_entry(monkeypatch: pytest.MonkeyPatch) -> None:
         CONF_WEBHOOK_BASE_URL: "https://ha.example",
         CONF_WEBHOOK_ID: "webhook-token",
     }
+
+
+def test_user_flow_returns_form_error_for_invalid_webhook_origin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _must_not_connect(_user_input: dict[str, Any]) -> dict[str, str]:
+        pytest.fail("Protect validation must not run for an invalid webhook origin")
+
+    monkeypatch.setattr(config_flow, "_async_validate_input", _must_not_connect)
+    flow = HaProtectBridgeConfigFlow()
+    flow.context = {"source": config_entries.SOURCE_USER}
+
+    result = asyncio.run(
+        flow.async_step_user(
+            {
+                CONF_HOST: "protect.local",
+                CONF_USERNAME: "admin",
+                CONF_PASSWORD: "secret",
+                CONF_VERIFY_SSL: False,
+                CONF_WEBHOOK_BASE_URL: "http://ha.local:notaport",
+            }
+        )
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {CONF_WEBHOOK_BASE_URL: "webhook_base_url"}
 
 
 def test_reconfigure_flow_keeps_existing_password_and_clears_override(
@@ -95,6 +134,33 @@ def test_reconfigure_flow_keeps_existing_password_and_clears_override(
         CONF_VERIFY_SSL: True,
         CONF_WEBHOOK_ID: "existing-webhook",
     }
+
+
+def test_reconfigure_returns_form_error_for_unsafe_webhook_origin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _must_not_connect(_user_input: dict[str, Any]) -> dict[str, str]:
+        pytest.fail("Protect validation must not run for an invalid webhook origin")
+
+    monkeypatch.setattr(config_flow, "_async_validate_input", _must_not_connect)
+    flow = HaProtectBridgeConfigFlow()
+    flow.context = {"source": config_entries.SOURCE_RECONFIGURE}
+    flow._reconfigure_entry = _mock_entry()
+
+    result = asyncio.run(
+        flow.async_step_reconfigure(
+            {
+                CONF_HOST: "protect.local",
+                CONF_USERNAME: "admin",
+                CONF_PASSWORD: "",
+                CONF_VERIFY_SSL: False,
+                CONF_WEBHOOK_BASE_URL: "http://user:secret@ha.local:8123",
+            }
+        )
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {CONF_WEBHOOK_BASE_URL: "webhook_base_url"}
 
 
 def test_reauth_flow_keeps_existing_password_when_left_blank(
@@ -180,6 +246,19 @@ def test_webhook_base_url_validator_requires_absolute_http_url() -> None:
 
     with pytest.raises(config_flow.vol.Invalid):
         config_flow._validate_webhook_base_url("http://ha.local:8123?token=secret")
+
+    for invalid in (
+        "http://ha.local:notaport",
+        "http://ha.local:",
+        "http://:8123",
+        "http://user:secret@ha.local:8123",
+    ):
+        with pytest.raises(config_flow.vol.Invalid):
+            config_flow._validate_webhook_base_url(invalid)
+
+    assert config_flow._validate_webhook_base_url("http://[::1]:8123/") == (
+        "http://[::1]:8123"
+    )
 
 
 def _mock_entry() -> Any:
