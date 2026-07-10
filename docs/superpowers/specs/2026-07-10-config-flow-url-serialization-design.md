@@ -87,3 +87,22 @@ or closing GitHub items.
 Shared Home Assistant sessions, resync concurrency changes, selector migration,
 95%+ total coverage, Dependabot, action pinning, and GitHub security-setting
 changes are intentionally deferred to a separate hardening release.
+
+## README documentation addendum
+
+Before publication, update the existing README without restructuring it. The
+public documentation must:
+
+- explain that a bare Protect host defaults to HTTPS and that explicit Protect
+  and webhook values must be clean HTTP(S) origins without credentials, paths,
+  queries, fragments, backslashes, whitespace, or malformed ports;
+- add a pre-publication `0.2.22` upgrade note describing the Home Assistant
+  2026.7 config-flow fix and clarifying that existing entries need no migration,
+  without claiming the version has already been released;
+- align the diagnostics section with the expanded title and detailed-error
+  redaction while retaining useful non-sensitive counters; and
+- turn the manual-install destination into complete copy, restart, and setup
+  instructions.
+
+Do not describe `0.2.22` as already released. Preserve the verified CLI
+`v0.1.5` example and the existing feature, entity, event, and service sections.
