@@ -15,7 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.4,<9",
+    "pytest>=9.0.3,<10",
     "ruff>=0.12,<0.13",
     "voluptuous-serialize>=2.7,<3",
 ]
