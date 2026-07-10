@@ -29,7 +29,7 @@ jobs:
       matrix:
         include:
           - name: minimum
-            requirement: homeassistant>=2026.3,<2026.4
+            requirement: homeassistant==2026.3.0
           - name: latest
             requirement: homeassistant>=2026.3
     steps:

@@ -17,7 +17,13 @@ def normalize_http_origin(
     text = str(value or "").strip()
     if not text:
         raise InvalidOrigin("origin is empty")
-    if any(character.isspace() or character == "\\" for character in text):
+    if any(
+        character.isspace()
+        or ord(character) < 32
+        or ord(character) == 127
+        or character == "\\"
+        for character in text
+    ):
         raise InvalidOrigin("origin contains invalid characters")
     if "://" not in text:
         if default_scheme not in {"http", "https"}:
