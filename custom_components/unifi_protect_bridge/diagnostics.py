@@ -24,6 +24,9 @@ _ENTRY_REDACT = {
 }
 _STATUS_REDACT = {
     CONF_HOST,
+    "automation_sync_errors",
+    "last_backfill_error",
+    "last_sync_error",
     "nvr_id",
     "nvr_name",
     "webhook_base_url_override",
@@ -41,7 +44,7 @@ async def async_get_config_entry_diagnostics(
     return {
         "entry": {
             "entry_id": getattr(entry, "entry_id", None),
-            "title": getattr(entry, "title", None),
+            "title": "REDACTED" if getattr(entry, "title", None) else None,
             "state": getattr(entry, "state", None),
             "data": async_redact_data(dict(getattr(entry, "data", {})), _ENTRY_REDACT),
             "options": dict(getattr(entry, "options", {})),

@@ -68,7 +68,7 @@ class _FakeRuntime:
             "last_backfill_changed_event_count": 0,
             "last_backfill_changed_sensor_count": 0,
             "last_backfill_at": "2026-04-06T01:00:00+00:00",
-            "last_backfill_error": None,
+            "last_backfill_error": "Request to 192.168.1.1 failed as hovborg",
             "webhook_configured": True,
             "webhook_url_source": "home_assistant_instance_url",
             "webhook_base_url_override_configured": False,
@@ -77,15 +77,17 @@ class _FakeRuntime:
             "camera_count": 2,
             "managed_sources": ["motion", "ring", "audio_alarm_baby_cry"],
             "managed_automation_count": 3,
-            "automation_sync_error_count": 0,
-            "automation_sync_errors": {},
+            "automation_sync_error_count": 1,
+            "automation_sync_errors": {
+                "person": "https://192.168.1.1 rejected secret-webhook-id"
+            },
             "sensor_count": 3,
             "known_sensor_count": 1,
             "unknown_sensor_count": 2,
             "known_sensor_counts_by_source": {"motion": 1},
             "unknown_sensor_counts_by_source": {"audio_alarm_baby_cry": 1, "ring": 1},
             "last_sync_at": "2026-04-06T01:00:00+00:00",
-            "last_sync_error": None,
+            "last_sync_error": "Could not connect to 192.168.1.1 as hovborg",
             "last_webhook_at": None,
             "webhook_count": 0,
             "unmatched_webhook_count": 0,
@@ -102,7 +104,7 @@ class _FakeRuntime:
 def test_config_entry_diagnostics_redacts_and_summarizes_runtime() -> None:
     entry = SimpleNamespace(
         entry_id="entry-1",
-        title="Dream Machine",
+        title="UniFi Protect @ 192.168.1.1",
         state="loaded",
         data={
             "host": "192.168.1.1",
@@ -124,6 +126,7 @@ def test_config_entry_diagnostics_redacts_and_summarizes_runtime() -> None:
     assert diagnostics["entry"]["data"]["webhook_base_url"] == "REDACTED"
     assert diagnostics["entry"]["data"]["webhook_id"] == "REDACTED"
     assert diagnostics["entry"]["options"] == {"event_backfill_limit": 0}
+    assert diagnostics["entry"]["title"] == "REDACTED"
 
     runtime = diagnostics["runtime"]
     assert runtime["status"]["host"] == "REDACTED"
@@ -135,11 +138,12 @@ def test_config_entry_diagnostics_redacts_and_summarizes_runtime() -> None:
     assert runtime["status"]["nvr_id"] == "REDACTED"
     assert runtime["status"]["nvr_name"] == "REDACTED"
     assert runtime["status"]["managed_sources"] == ["motion", "ring", "audio_alarm_baby_cry"]
-    assert runtime["status"]["automation_sync_error_count"] == 0
-    assert runtime["status"]["automation_sync_errors"] == {}
+    assert runtime["status"]["automation_sync_error_count"] == 1
+    assert runtime["status"]["automation_sync_errors"] == "REDACTED"
     assert runtime["status"]["known_sensor_count"] == 1
     assert runtime["status"]["unknown_sensor_count"] == 2
-    assert runtime["status"]["last_backfill_error"] is None
+    assert runtime["status"]["last_backfill_error"] == "REDACTED"
+    assert runtime["status"]["last_sync_error"] == "REDACTED"
     assert runtime["catalog"]["camera_count"] == 2
     assert runtime["catalog"]["doorbell_count"] == 1
     assert runtime["catalog"]["models"] == {"G4 Doorbell Pro": 1, "G6 Instant": 1}
