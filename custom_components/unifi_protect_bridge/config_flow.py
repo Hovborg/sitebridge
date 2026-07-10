@@ -4,7 +4,6 @@ import logging
 import secrets
 from collections.abc import Mapping
 from typing import Any
-from urllib.parse import urlsplit
 
 import voluptuous as vol
 from homeassistant import config_entries
@@ -24,6 +23,7 @@ from .const import (
     DOMAIN,
     MAX_EVENT_BACKFILL_LIMIT,
 )
+from .origin import InvalidOrigin, normalize_http_origin
 from .protect_api import ProtectApiClient, ProtectApiError, ProtectAuthError
 
 _LOGGER = logging.getLogger(__name__)
@@ -67,25 +67,29 @@ class HaProtectBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            cleaned = _clean_user_input(user_input)
             try:
-                info = await _async_validate_input(cleaned)
-            except ProtectAuthError:
-                errors["base"] = "invalid_auth"
-            except ProtectApiError:
-                errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error while validating Protect connection")
-                errors["base"] = "unknown"
+                cleaned = _clean_user_input(user_input)
+            except vol.Invalid:
+                errors[CONF_WEBHOOK_BASE_URL] = "webhook_base_url"
             else:
-                unique_id = info.get("nvr_id") or cleaned[CONF_HOST]
-                await self.async_set_unique_id(unique_id)
-                self._abort_if_unique_id_configured()
-                cleaned[CONF_WEBHOOK_ID] = secrets.token_hex(32)
-                return self.async_create_entry(
-                    title=info.get("title") or cleaned[CONF_HOST],
-                    data=cleaned,
-                )
+                try:
+                    info = await _async_validate_input(cleaned)
+                except ProtectAuthError:
+                    errors["base"] = "invalid_auth"
+                except ProtectApiError:
+                    errors["base"] = "cannot_connect"
+                except Exception:
+                    _LOGGER.exception("Unexpected error while validating Protect connection")
+                    errors["base"] = "unknown"
+                else:
+                    unique_id = info.get("nvr_id") or cleaned[CONF_HOST]
+                    await self.async_set_unique_id(unique_id)
+                    self._abort_if_unique_id_configured()
+                    cleaned[CONF_WEBHOOK_ID] = secrets.token_hex(32)
+                    return self.async_create_entry(
+                        title=info.get("title") or cleaned[CONF_HOST],
+                        data=cleaned,
+                    )
 
         return self.async_show_form(
             step_id="user",
@@ -105,31 +109,35 @@ class HaProtectBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            cleaned = _clean_user_input(user_input, existing_data=entry.data)
-            updated_data = _build_updated_entry_data(
-                entry.data,
-                cleaned,
-                clear_webhook_base_url=_clear_webhook_base_url(user_input),
-            )
             try:
-                info = await _async_validate_input(updated_data)
-            except ProtectAuthError:
-                errors["base"] = "invalid_auth"
-            except ProtectApiError:
-                errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error while validating Protect connection")
-                errors["base"] = "unknown"
+                cleaned = _clean_user_input(user_input, existing_data=entry.data)
+            except vol.Invalid:
+                errors[CONF_WEBHOOK_BASE_URL] = "webhook_base_url"
             else:
-                unique_id = info.get("nvr_id") or updated_data[CONF_HOST]
-                await self.async_set_unique_id(unique_id)
-                self._abort_if_unique_id_mismatch(reason="wrong_account")
-                return self.async_update_reload_and_abort(
-                    entry,
-                    unique_id=unique_id,
-                    title=info.get("title") or updated_data[CONF_HOST],
-                    data=updated_data,
+                updated_data = _build_updated_entry_data(
+                    entry.data,
+                    cleaned,
+                    clear_webhook_base_url=_clear_webhook_base_url(user_input),
                 )
+                try:
+                    info = await _async_validate_input(updated_data)
+                except ProtectAuthError:
+                    errors["base"] = "invalid_auth"
+                except ProtectApiError:
+                    errors["base"] = "cannot_connect"
+                except Exception:
+                    _LOGGER.exception("Unexpected error while validating Protect connection")
+                    errors["base"] = "unknown"
+                else:
+                    unique_id = info.get("nvr_id") or updated_data[CONF_HOST]
+                    await self.async_set_unique_id(unique_id)
+                    self._abort_if_unique_id_mismatch(reason="wrong_account")
+                    return self.async_update_reload_and_abort(
+                        entry,
+                        unique_id=unique_id,
+                        title=info.get("title") or updated_data[CONF_HOST],
+                        data=updated_data,
+                    )
 
         return self.async_show_form(
             step_id=step_id,
@@ -158,7 +166,7 @@ def _build_full_schema(
             vol.Optional(
                 CONF_WEBHOOK_BASE_URL,
                 default=defaults.get(CONF_WEBHOOK_BASE_URL, ""),
-            ): _validate_webhook_base_url,
+            ): str,
         }
     )
 
@@ -194,9 +202,11 @@ def _clean_user_input(
         cleaned[CONF_PASSWORD] = str(existing_data[CONF_PASSWORD])
 
     if CONF_WEBHOOK_BASE_URL in cleaned:
-        webhook_base_url = str(cleaned.get(CONF_WEBHOOK_BASE_URL, "")).strip()
+        webhook_base_url = _validate_webhook_base_url(
+            cleaned.get(CONF_WEBHOOK_BASE_URL)
+        )
         if webhook_base_url:
-            cleaned[CONF_WEBHOOK_BASE_URL] = webhook_base_url.rstrip("/")
+            cleaned[CONF_WEBHOOK_BASE_URL] = webhook_base_url
         else:
             cleaned.pop(CONF_WEBHOOK_BASE_URL, None)
 
@@ -315,17 +325,10 @@ def _validate_webhook_base_url(value: Any) -> str:
     text = str(value or "").strip()
     if not text:
         return ""
-
-    parsed = urlsplit(text)
-    if (
-        parsed.scheme not in {"http", "https"}
-        or not parsed.netloc
-        or parsed.path not in {"", "/"}
-        or parsed.query
-        or parsed.fragment
-    ):
-        raise vol.Invalid("webhook_base_url")
-    return f"{parsed.scheme}://{parsed.netloc}"
+    try:
+        return normalize_http_origin(text)
+    except InvalidOrigin as err:
+        raise vol.Invalid("webhook_base_url") from err
 
 
 async def _async_validate_input(user_input: dict[str, Any]) -> dict[str, str | None]:

@@ -83,11 +83,19 @@ Direct HACS link:
 https://my.home-assistant.io/redirect/hacs_repository/?owner=Hovborg&repository=unifi-protect-bridge&category=integration
 ```
 
-Manual install path:
+Manual installation, if you do not use HACS:
 
-```text
-config/custom_components/unifi_protect_bridge/
-```
+1. Download and extract the source for the release you want to install.
+2. Copy the repository's `custom_components/unifi_protect_bridge` directory to
+   `<config>/custom_components/unifi_protect_bridge` in your Home Assistant
+   configuration directory. Copy the integration directory, not the entire
+   repository.
+3. Restart Home Assistant.
+4. Go to **Settings -> Devices & services -> Add Integration** and add
+   **UniFi Protect Bridge**.
+
+For a manual upgrade, replace that integration directory with the one from the
+new release, then restart Home Assistant.
 
 ## Configure
 
@@ -98,6 +106,18 @@ The config flow asks for:
 - Password
 - SSL verification choice
 - Optional webhook base URL override
+
+For **Protect host**, you can enter a bare local hostname or address, such as
+`protect.local`, `192.168.1.10`, or `192.168.1.10:443`. Bare values use HTTPS.
+You can also enter an explicit HTTP or HTTPS origin, such as
+`https://protect.local` or `http://192.168.1.10`.
+
+Protect host and webhook override values must be clean HTTP(S) origins. Do not
+include credentials, paths, query strings, fragments, backslashes, internal
+whitespace, empty ports, or non-numeric ports. A webhook override must include
+`http://` or `https://`; a trailing `/` is accepted and removed. An invalid
+webhook override stays on the form with a field error and is rejected before
+the integration attempts to connect to Protect.
 
 Use a dedicated local UniFi OS / Protect user for the integration. Avoid owner,
 UI.com SSO, and MFA accounts for automated local integrations.
@@ -304,6 +324,20 @@ to use it.
 
 ## Upgrade From Older Releases
 
+### Version 0.2.22
+
+Version `0.2.22` restores config-flow compatibility with Home Assistant 2026.7
+while keeping the declared minimum at Home Assistant `2026.3.0`. The setup and
+reconfigure forms open normally again, while strict Protect host and
+webhook-origin validation remains in place.
+
+Existing config entries do not need migration. Upgrade the integration,
+restart Home Assistant, and keep the existing entry. Invalid webhook override
+values now produce a normal field error instead of preventing the config form
+from opening.
+
+### Version 0.2.9 domain rename
+
 Version `0.2.9` renamed the integration domain from `ha_protect_bridge` to
 `unifi_protect_bridge`.
 
@@ -374,7 +408,9 @@ http://192.168.1.190:8123
 ```
 
 Enter only the base URL. Do not include `/api/webhook/...`, query strings, or
-the webhook token.
+the webhook token. The value must start with `http://` or `https://` and must
+not contain credentials, a path, a fragment, internal whitespace, or a
+malformed port.
 
 ### Timestamp sensors stay unknown
 
@@ -404,11 +440,18 @@ disable startup backfill.
 Use Home Assistant's **Download diagnostics** action on the config entry. The
 integration redacts:
 
+- config-entry title
 - username
 - password
 - host
 - webhook ID
-- webhook URL details
+- webhook base URL, generated URL, path, and override details
+- NVR name and ID
+- detailed automation-sync, backfill, and sync error strings
+
+Non-sensitive support data remains available, including counts, camera models,
+managed sources, sensor summaries, timestamps, and whether a webhook override
+is configured.
 
 ## Technical Note
 

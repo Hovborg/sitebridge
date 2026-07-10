@@ -24,13 +24,32 @@ def test_protect_api_client_accepts_custom_timeout() -> None:
 
 
 def test_protect_api_rejects_non_http_hosts() -> None:
-    with pytest.raises(ProtectApiError, match="http or https"):
+    with pytest.raises(ProtectApiError, match="Invalid Protect host"):
         _normalize_base_url("ftp://protect.example")
 
 
 def test_protect_api_rejects_hosts_with_paths() -> None:
-    with pytest.raises(ProtectApiError, match="host or origin"):
+    with pytest.raises(ProtectApiError, match="Invalid Protect host"):
         _normalize_base_url("https://protect.example/proxy/protect")
+
+
+@pytest.mark.parametrize(
+    "host",
+    (
+        "https://protect.example:notaport",
+        "https://protect.example:",
+        "https://:443",
+        "https://user:secret@protect.example",
+    ),
+)
+def test_protect_api_rejects_malformed_or_credentialed_origins(host: str) -> None:
+    with pytest.raises(ProtectApiError, match="Invalid Protect host"):
+        _normalize_base_url(host)
+
+
+def test_protect_api_accepts_bare_host_and_ipv6_origin() -> None:
+    assert _normalize_base_url("protect.example") == "https://protect.example"
+    assert _normalize_base_url("http://[::1]:7443/") == "http://[::1]:7443"
 
 
 def test_protect_api_login_wraps_client_errors() -> None:
