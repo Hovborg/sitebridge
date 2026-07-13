@@ -19,3 +19,12 @@
 - Prefer GitHub CLI (`gh`) for GitHub-specific work when it is available and authenticated.
 - Use `gh run`, `gh workflow`, `gh pr`, and `gh api` for CI runs, workflow logs, PR state, and GitHub metadata instead of relying on notification emails or manual browser checks.
 - Keep using plain `git` for normal local repository operations such as diff, commit, and push.
+
+<!-- workspace-goal-pointer:start -->
+## Workspace defaults
+
+See the root `AGENTS.md` (`/mnt/c/codex_projekts/AGENTS.md`) for the shared
+**Goal** structure (outcome / scope / done-when), **Docs & config sync**, and
+**Commit / push / PR / merge** self-run rules. Anything in this file overrides
+those defaults.
+<!-- workspace-goal-pointer:end -->
